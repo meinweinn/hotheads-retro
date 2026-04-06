@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HotHeads Archive Node</title>
+    <meta
+      name="description"
+      content="A retro game-themed interactive website for the HotHeads universe."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="is-booting">
+    <div class="crt-overlay" aria-hidden="true"></div>
+
+    <section class="boot-screen" data-boot-screen>
+      <div class="boot-screen__core">
+        <p class="boot-label">HOTHEADS BIOS v03</p>
+        <h1 class="boot-title">Infernal Quest Console</h1>
+        <p class="boot-subtitle">Pixel archive ready. Audio channel locked behind user input.</p>
+
+        <div class="boot-window">
+          <div class="boot-window__head">
+            <span>BOOT.LOG</span>
+            <span>HOLD TO IGNITE</span>
+          </div>
+
+          <div class="boot-lines" data-boot-lines>
+            <p>> Waiting for ignition handshake...</p>
+          </div>
+
+          <div class="boot-progress">
+            <span class="boot-progress__bar" data-boot-progress></span>
+          </div>
+        </div>
+
+        <div class="boot-actions">
+          <button class="boot-button" type="button" data-boot-start>
+            <span class="boot-button__lava" data-boot-fill></span>
+            <span class="boot-button__label" data-boot-label>Hold To Start</span>
+          </button>
+          <p class="boot-hint">Press and hold the button until the lava charge reaches 100%.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="victory-screen" data-victory-screen aria-hidden="true">
+      <div class="victory-screen__backdrop" data-victory-backdrop></div>
+      <div class="victory-card">
+        <p class="chip" data-victory-chip>Chapter Clear</p>
+        <h2 class="victory-card__title" data-victory-title>Hydra Gate Secured</h2>
+        <p class="victory-card__copy" data-victory-copy>
+          The archive recognizes your victory. Rewards and route data are now synced.
+        </p>
+
+        <div class="victory-stats">
+          <div class="victory-stat">
+            <span>Objective</span>
+            <strong data-victory-objective>5 / 5</strong>
+          </div>
+          <div class="victory-stat">
+            <span>Shield Left</span>
+            <strong data-victory-shield>84%</strong>
+          </div>
+          <div class="victory-stat">
+            <span>Relic Sync</span>
+            <strong data-victory-sync>100%</strong>
+          </div>
+        </div>
+
+        <div class="victory-rewards">
+          <p class="chip">Unlocked Reward</p>
+          <ul data-victory-rewards>
+            <li>Archive route data restored</li>
+            <li>Next chapter access granted</li>
+            <li>Relic cache synchronized</li>
+          </ul>
+        </div>
+
+        <div class="victory-actions">
+          <button class="choice-btn is-live" type="button" data-victory-continue>Continue</button>
+          <button class="choice-btn" type="button" data-victory-replay>Replay Chapter</button>
+        </div>
+      </div>
+    </section>
+
+    <main class="arcade-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <img src="./assets/hotheads-logo-trans.png" alt="HotHeads" class="brand-logo" data-brand-logo />
+          <div class="brand-copy">
+            <p class="chip">Archive Node 03</p>
+            <h1>Infernal Quest Console</h1>
+          </div>
+        </div>
+
+        <div class="topbar-status">
+          <div class="theme-switcher panel-lite">
+            <span class="status-pill__label">Theme</span>
+            <div class="theme-switcher__buttons" role="tablist" aria-label="Theme selector">
+              <button class="theme-btn theme-btn--icon is-active" type="button" data-theme-option="inferno" aria-label="Inferno theme">
+                <img src="./assets/inferno-icon.png" alt="" class="theme-btn__icon" />
+              </button>
+              <button class="theme-btn theme-btn--icon" type="button" data-theme-option="toxic" aria-label="Toxic theme">
+                <img src="./assets/toxic-icon.png" alt="" class="theme-btn__icon" />
+              </button>
+              <button class="theme-btn theme-btn--icon" type="button" data-theme-option="abyss" aria-label="Abyss theme">
+                <img src="./assets/abyss-icon.png" alt="" class="theme-btn__icon" />
+              </button>
+            </div>
+          </div>
+          <div class="status-pill">
+            <span class="status-pill__label">Signal</span>
+            <strong>Stable</strong>
+          </div>
+          <div class="status-pill">
+            <span class="status-pill__label">Build</span>
+            <strong>v1.0.0</strong>
+          </div>
+          <div class="status-pill">
+            <span class="status-pill__label">Clock</span>
+            <strong data-clock>--:--:--</strong>
+          </div>
+          <div class="status-pill">
+            <span class="status-pill__label">Audio</span>
+            <strong data-audio-status>Standby</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="game-grid">
+        <aside class="panel mission-panel">
+          <div class="panel-head">
+            <p class="chip">Mission Select</p>
+            <h2>Choose your chapter</h2>
+          </div>
+
+          <div class="mission-list" role="tablist" aria-label="Scene selector">
+            <button class="mission-btn is-active" data-scene="hydra" data-hotkey="1">
+              <span class="mission-btn__index">01</span>
+              <span class="mission-btn__body">
+                <strong>Hydra Gate</strong>
+                <small>Scout the cliff route and read enemy movement.</small>
+                <em class="mission-btn__state" data-scene-state="hydra">Unlocked</em>
+              </span>
+            </button>
+
+            <button class="mission-btn" data-scene="warden" data-hotkey="2">
+              <span class="mission-btn__index">02</span>
+              <span class="mission-btn__body">
+                <strong>Lava Warden</strong>
+                <small>Study the furnace beast and recover relic fragments.</small>
+                <em class="mission-btn__state" data-scene-state="warden">Locked</em>
+              </span>
+            </button>
+
+            <button class="mission-btn" data-scene="river" data-hotkey="3">
+              <span class="mission-btn__index">03</span>
+              <span class="mission-btn__body">
+                <strong>River Run</strong>
+                <small>Guide the convoy through smoke, ash, and drifting fire.</small>
+                <em class="mission-btn__state" data-scene-state="river">Locked</em>
+              </span>
+            </button>
+          </div>
+
+          <div class="transmission-box">
+            <p class="chip">Transmission</p>
+            <p data-transmission>
+              Archive online. Select a chapter to load field intel, then trigger a command.
+            </p>
+          </div>
+        </aside>
+
+        <section class="viewport-panel">
+          <div class="viewport-shell panel">
+            <div class="viewport-head">
+              <div>
+                <p class="chip" data-scene-chip>Chapter 01</p>
+                <h2 data-scene-title>Hydra Gate</h2>
+              </div>
+              <div class="viewport-meta">
+                <span data-scene-zone>Zone // Cliffside Ruins</span>
+                <span data-scene-risk>Risk // High</span>
+              </div>
+            </div>
+
+            <div class="viewport">
+              <div class="viewport-grid" aria-hidden="true"></div>
+              <img
+                class="scene-image is-active"
+                data-scene-image
+                src="./assets/scene-1.jpg"
+                alt="HotHeads hero facing a hydra."
+              />
+              <div class="viewport-flare" aria-hidden="true"></div>
+              <canvas class="game-canvas" data-game-canvas width="960" height="540"></canvas>
+              <div class="game-center-message" data-game-center>
+                <strong data-game-center-title>PRESS SPACE TO START MISSION</strong>
+                <span data-game-center-copy>Use WASD / arrow keys to move. Q W E trigger abilities.</span>
+              </div>
+              <div class="game-banner">
+                <span data-game-status>PRESS SPACE TO DEPLOY</span>
+                <span data-game-score>Objective 0/0</span>
+              </div>
+            </div>
+
+            <div class="command-row">
+              <button class="action-btn" data-action="scan">Scan Zone</button>
+              <button class="action-btn" data-action="ignite">Ignite Relic</button>
+              <button class="action-btn" data-action="shield">Raise Shield</button>
+            </div>
+            <p class="viewport-help">Controls: Move with WASD or arrow keys. Space starts or restarts the mission.</p>
+          </div>
+
+          <div class="console panel">
+            <div class="console-head">
+              <p class="chip">Console Log</p>
+              <span>Hotkeys: 1 2 3 / Q W E</span>
+            </div>
+            <p class="console-output" data-console-output>
+              >> Stand by for mission parameters. Quest engine ready.
+            </p>
+            <div class="choice-row">
+              <button class="choice-btn" data-choice="accept">Accept Quest</button>
+              <button class="choice-btn" data-choice="reroute">Reroute Squad</button>
+              <button class="choice-btn" data-choice="cache">Open Cache</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel systems-panel">
+          <div class="panel-head">
+            <p class="chip">System Readout</p>
+            <h2>Live status</h2>
+          </div>
+
+          <div class="meter-stack">
+            <div class="meter">
+              <div class="meter__label">
+                <span>Heat</span>
+                <strong data-heat-value>62%</strong>
+              </div>
+              <div class="meter__track"><span data-heat-bar style="width: 62%"></span></div>
+            </div>
+
+            <div class="meter">
+              <div class="meter__label">
+                <span>Shield</span>
+                <strong data-shield-value>84%</strong>
+              </div>
+              <div class="meter__track"><span data-shield-bar style="width: 84%"></span></div>
+            </div>
+
+            <div class="meter">
+              <div class="meter__label">
+                <span>Relic Sync</span>
+                <strong data-sync-value>41%</strong>
+              </div>
+              <div class="meter__track"><span data-sync-bar style="width: 41%"></span></div>
+            </div>
+          </div>
+
+          <div class="inventory-box">
+            <p class="chip">Inventory</p>
+            <ul class="inventory-list" data-inventory-list>
+              <li>Flame Sigil / Equipped</li>
+              <li>Bone Key / Dormant</li>
+              <li>Ash Map / Traced</li>
+            </ul>
+          </div>
+
+          <div class="quest-box">
+            <p class="chip">Objective</p>
+            <h3 data-objective-title>Reach the hydra overlook</h3>
+            <p data-objective-copy>
+              Sweep the upper ridge, identify weak points, and keep the beacon alive.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
