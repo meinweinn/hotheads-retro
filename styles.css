@@ -124,6 +124,48 @@
   initial-value: rgba(255, 184, 81, 0.12);
 }
 
+@property --boot-charge-core {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 241, 172, 0.95);
+}
+
+@property --boot-charge-start {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff612e;
+}
+
+@property --boot-charge-mid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff8d2c;
+}
+
+@property --boot-charge-end {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffd25d;
+}
+
+@property --boot-charge-tail {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff7a23;
+}
+
+@property --boot-button-glow-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 184, 81, 0.12);
+}
+
+@property --boot-button-glow-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 110, 50, 0.18);
+}
+
 :root {
   --bg: #140904;
   --bg-deep: #070201;
@@ -149,6 +191,13 @@
   --flare: rgba(255, 111, 38, 0.28);
   --logo-glow-a: rgba(255, 106, 61, 0.2);
   --logo-glow-b: rgba(255, 184, 81, 0.12);
+  --boot-charge-core: rgba(255, 241, 172, 0.95);
+  --boot-charge-start: #ff612e;
+  --boot-charge-mid: #ff8d2c;
+  --boot-charge-end: #ffd25d;
+  --boot-charge-tail: #ff7a23;
+  --boot-button-glow-a: rgba(255, 184, 81, 0.12);
+  --boot-button-glow-b: rgba(255, 110, 50, 0.18);
 }
 
 body[data-theme="inferno"] {
@@ -175,6 +224,13 @@ body[data-theme="inferno"] {
   --flare: rgba(255, 111, 38, 0.28);
   --logo-glow-a: rgba(255, 106, 61, 0.2);
   --logo-glow-b: rgba(255, 184, 81, 0.12);
+  --boot-charge-core: rgba(255, 241, 172, 0.95);
+  --boot-charge-start: #ff612e;
+  --boot-charge-mid: #ff8d2c;
+  --boot-charge-end: #ffd25d;
+  --boot-charge-tail: #ff7a23;
+  --boot-button-glow-a: rgba(255, 184, 81, 0.12);
+  --boot-button-glow-b: rgba(255, 110, 50, 0.18);
 }
 
 body[data-theme="toxic"] {
@@ -201,6 +257,13 @@ body[data-theme="toxic"] {
   --flare: rgba(102, 255, 196, 0.22);
   --logo-glow-a: rgba(57, 255, 136, 0.22);
   --logo-glow-b: rgba(183, 255, 77, 0.14);
+  --boot-charge-core: rgba(230, 255, 180, 0.95);
+  --boot-charge-start: #1ecb63;
+  --boot-charge-mid: #39ff88;
+  --boot-charge-end: #b7ff4d;
+  --boot-charge-tail: #66ffc4;
+  --boot-button-glow-a: rgba(103, 255, 170, 0.16);
+  --boot-button-glow-b: rgba(57, 255, 136, 0.2);
 }
 
 body[data-theme="abyss"] {
@@ -227,6 +290,13 @@ body[data-theme="abyss"] {
   --flare: rgba(139, 215, 255, 0.18);
   --logo-glow-a: rgba(165, 96, 255, 0.2);
   --logo-glow-b: rgba(139, 215, 255, 0.14);
+  --boot-charge-core: rgba(236, 215, 255, 0.95);
+  --boot-charge-start: #8b6cff;
+  --boot-charge-mid: #a560ff;
+  --boot-charge-end: #c77aff;
+  --boot-charge-tail: #8bd7ff;
+  --boot-button-glow-a: rgba(199, 122, 255, 0.16);
+  --boot-button-glow-b: rgba(139, 215, 255, 0.18);
 }
 
 * {
@@ -270,7 +340,14 @@ body {
     --boot-radial 520ms ease,
     --flare 520ms ease,
     --logo-glow-a 420ms ease,
-    --logo-glow-b 420ms ease;
+    --logo-glow-b 420ms ease,
+    --boot-charge-core 420ms ease,
+    --boot-charge-start 420ms ease,
+    --boot-charge-mid 420ms ease,
+    --boot-charge-end 420ms ease,
+    --boot-charge-tail 420ms ease,
+    --boot-button-glow-a 420ms ease,
+    --boot-button-glow-b 420ms ease;
 }
 
 body *,
@@ -619,8 +696,14 @@ body.is-booting .arcade-shell {
   display: block;
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, var(--cyan), var(--amber), var(--red));
-  box-shadow: 0 0 18px rgba(255, 184, 81, 0.2);
+  background: linear-gradient(
+    90deg,
+    var(--boot-charge-start),
+    var(--boot-charge-mid),
+    var(--boot-charge-end),
+    var(--boot-charge-tail)
+  );
+  box-shadow: 0 0 18px var(--boot-button-glow-b);
   transition: width 260ms ease;
 }
 
@@ -652,8 +735,8 @@ body.is-booting .arcade-shell {
 
 .boot-button.is-holding {
   box-shadow:
-    0 0 0 1px rgba(255, 184, 81, 0.12) inset,
-    0 0 26px rgba(255, 110, 50, 0.18);
+    0 0 0 1px var(--boot-button-glow-a) inset,
+    0 0 26px var(--boot-button-glow-b);
 }
 
 .boot-button__lava,
@@ -667,12 +750,18 @@ body.is-booting .arcade-shell {
   width: 0%;
   z-index: 0;
   background:
-    radial-gradient(circle at 30% 50%, rgba(255, 241, 172, 0.95), transparent 18%),
-    linear-gradient(90deg, #ff612e 0%, #ff8d2c 40%, #ffd25d 65%, #ff7a23 100%);
+    radial-gradient(circle at 30% 50%, var(--boot-charge-core), transparent 18%),
+    linear-gradient(
+      90deg,
+      var(--boot-charge-start) 0%,
+      var(--boot-charge-mid) 40%,
+      var(--boot-charge-end) 65%,
+      var(--boot-charge-tail) 100%
+    );
   background-size: 120px 100%, 220px 100%;
   box-shadow:
-    0 0 28px rgba(255, 112, 44, 0.28),
-    inset 0 0 18px rgba(255, 237, 150, 0.2);
+    0 0 28px var(--boot-button-glow-b),
+    inset 0 0 18px var(--boot-button-glow-a);
   transition: width 80ms linear;
   animation: lavaCharge 1.2s linear infinite;
 }
