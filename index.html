@@ -197,7 +197,7 @@
               <canvas class="game-canvas" data-game-canvas width="960" height="540"></canvas>
               <div class="game-center-message" data-game-center>
                 <strong data-game-center-title>PRESS SPACE TO START MISSION</strong>
-                <span data-game-center-copy>Use WASD / arrow keys to move. Q W E trigger abilities.</span>
+                <span data-game-center-copy>Use WASD / arrow keys to move. 1 2 3 4 trigger abilities.</span>
               </div>
               <div class="game-banner">
                 <span data-game-status>PRESS SPACE TO DEPLOY</span>
@@ -205,18 +205,23 @@
               </div>
             </div>
 
-            <div class="command-row">
-              <button class="action-btn" data-action="scan">Scan Zone</button>
-              <button class="action-btn" data-action="ignite">Ignite Relic</button>
-              <button class="action-btn" data-action="shield">Raise Shield</button>
+            <div class="skill-head">
+              <p class="chip">Skill Rack</p>
+              <p class="skill-copy">Trigger combat abilities with 1 2 3 4 or inspect them before a mission.</p>
             </div>
-            <p class="viewport-help">Controls: Move with WASD or arrow keys. Space starts or restarts the mission.</p>
+            <div class="command-row">
+              <button class="action-btn" data-action="scan">[1] Scan Zone</button>
+              <button class="action-btn" data-action="ignite">[2] Ignite Relic</button>
+              <button class="action-btn" data-action="shield">[3] Raise Shield</button>
+              <button class="action-btn" data-action="surge">[4] Dash Surge</button>
+            </div>
+            <p class="viewport-help">Controls: Move with WASD or arrow keys. Press 1 2 3 4 for skills. Space starts the mission.</p>
           </div>
 
           <div class="console panel">
             <div class="console-head">
               <p class="chip">Console Log</p>
-              <span>Hotkeys: 1 2 3 / Q W E</span>
+              <span>Hotkeys: Skills 1 2 3 4</span>
             </div>
             <p class="console-output" data-console-output>
               >> Stand by for mission parameters. Quest engine ready.

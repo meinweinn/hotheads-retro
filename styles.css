@@ -112,6 +112,18 @@
   initial-value: rgba(255, 106, 61, 0.24);
 }
 
+@property --logo-glow-a {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 106, 61, 0.2);
+}
+
+@property --logo-glow-b {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(255, 184, 81, 0.12);
+}
+
 :root {
   --bg: #140904;
   --bg-deep: #070201;
@@ -135,6 +147,8 @@
   --boot-overlay-bottom: rgba(0, 0, 0, 0.8);
   --boot-radial: rgba(255, 155, 62, 0.1);
   --flare: rgba(255, 111, 38, 0.28);
+  --logo-glow-a: rgba(255, 106, 61, 0.2);
+  --logo-glow-b: rgba(255, 184, 81, 0.12);
 }
 
 body[data-theme="inferno"] {
@@ -159,6 +173,8 @@ body[data-theme="inferno"] {
   --boot-overlay-bottom: rgba(0, 0, 0, 0.8);
   --boot-radial: rgba(255, 155, 62, 0.1);
   --flare: rgba(255, 111, 38, 0.28);
+  --logo-glow-a: rgba(255, 106, 61, 0.2);
+  --logo-glow-b: rgba(255, 184, 81, 0.12);
 }
 
 body[data-theme="toxic"] {
@@ -183,6 +199,8 @@ body[data-theme="toxic"] {
   --boot-overlay-bottom: rgba(0, 0, 0, 0.8);
   --boot-radial: rgba(183, 255, 77, 0.1);
   --flare: rgba(102, 255, 196, 0.22);
+  --logo-glow-a: rgba(57, 255, 136, 0.22);
+  --logo-glow-b: rgba(183, 255, 77, 0.14);
 }
 
 body[data-theme="abyss"] {
@@ -207,6 +225,8 @@ body[data-theme="abyss"] {
   --boot-overlay-bottom: rgba(0, 0, 0, 0.82);
   --boot-radial: rgba(199, 122, 255, 0.08);
   --flare: rgba(139, 215, 255, 0.18);
+  --logo-glow-a: rgba(165, 96, 255, 0.2);
+  --logo-glow-b: rgba(139, 215, 255, 0.14);
 }
 
 * {
@@ -248,7 +268,9 @@ body {
     --boot-overlay-top 520ms ease,
     --boot-overlay-bottom 520ms ease,
     --boot-radial 520ms ease,
-    --flare 520ms ease;
+    --flare 520ms ease,
+    --logo-glow-a 420ms ease,
+    --logo-glow-b 420ms ease;
 }
 
 body *,
@@ -346,8 +368,8 @@ body.is-booting .arcade-shell {
   width: 170px;
   image-rendering: pixelated;
   filter:
-    drop-shadow(0 0 18px rgba(255, 106, 61, 0.2))
-    drop-shadow(0 0 24px rgba(255, 184, 81, 0.12));
+    drop-shadow(0 0 18px var(--logo-glow-a))
+    drop-shadow(0 0 24px var(--logo-glow-b));
   transition: opacity 260ms ease, filter 420ms ease, transform 260ms ease;
 }
 
@@ -972,6 +994,12 @@ body.is-booting .arcade-shell {
   object-fit: cover;
   image-rendering: pixelated;
   filter: saturate(1.08) contrast(1.06);
+  transition: opacity 260ms ease, filter 420ms ease, transform 260ms ease;
+}
+
+.scene-image.is-switching {
+  opacity: 0.18;
+  transform: scale(1.015);
 }
 
 .game-canvas {
@@ -1067,6 +1095,19 @@ body.is-booting .arcade-shell {
   gap: 0.8rem;
 }
 
+.skill-head {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.skill-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
 .action-btn,
 .choice-btn {
   padding: 0.8rem 1rem;
@@ -1080,6 +1121,17 @@ body.is-booting .arcade-shell {
 .choice-btn.is-live {
   border-color: rgba(124, 255, 218, 0.34);
   box-shadow: 0 0 0 1px rgba(124, 255, 218, 0.08) inset;
+}
+
+.action-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn.is-cooling {
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
 }
 
 .console {

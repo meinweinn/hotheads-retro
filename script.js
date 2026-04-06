@@ -41,6 +41,7 @@ const syncBar = document.querySelector("[data-sync-bar]");
 const inventoryList = document.querySelector("[data-inventory-list]");
 const clockNode = document.querySelector("[data-clock]");
 const gameCanvas = document.querySelector("[data-game-canvas]");
+const gameViewport = gameCanvas ? gameCanvas.closest(".viewport") : null;
 const gameStatusNode = document.querySelector("[data-game-status]");
 const gameScoreNode = document.querySelector("[data-game-score]");
 const gameCenterNode = document.querySelector("[data-game-center]");
@@ -136,10 +137,130 @@ const progressStorageKey = "hotheads-archive-progress-v1";
 const completedStorageKey = "hotheads-archive-completed-v1";
 const themeStorageKey = "hotheads-archive-theme-v1";
 const validThemes = new Set(["inferno", "toxic", "abyss"]);
+const actionConfig = {
+  scan: { hotkey: "1", label: "Scan Zone" },
+  ignite: { hotkey: "2", label: "Ignite Relic", cooldown: 10 },
+  shield: { hotkey: "3", label: "Raise Shield", cooldown: 20 },
+  surge: { hotkey: "4", label: "Dash Surge" },
+};
+const actionDescriptions = {
+  scan:
+    "Scan Zone: reveals nearby objectives with a radar pulse. Usable once per mission.",
+  ignite:
+    "Ignite Relic: releases a close-range burst that clears nearby hazards. Cooldown: 10 seconds.",
+  shield:
+    "Raise Shield: restores 50% shield integrity and projects a defensive shell. Cooldown: 20 seconds.",
+  surge:
+    "Dash Surge: doubles movement speed for 1 second. Usable once per mission.",
+};
 const logoByTheme = {
   inferno: "./assets/hotheads-logo-trans.png",
   toxic: "./assets/hotheads-logo-trans-toxic.png",
   abyss: "./assets/hotheads-logo-trans-abyss.png",
+};
+const characterSpriteByTheme = {
+  inferno: "./assets/hothead-character.png",
+  toxic: "./assets/hothead-character-toxic.png",
+  abyss: "./assets/hothead-character-abyss.png",
+};
+const characterGlowByTheme = {
+  inferno: {
+    inner: [255, 214, 112],
+    outer: [255, 106, 61],
+  },
+  toxic: {
+    inner: [190, 255, 118],
+    outer: [57, 255, 136],
+  },
+  abyss: {
+    inner: [219, 164, 255],
+    outer: [165, 96, 255],
+  },
+};
+const scanPulseByTheme = {
+  inferno: {
+    ring: [255, 184, 81],
+    fill: [255, 106, 61],
+    sweep: [255, 226, 155],
+  },
+  toxic: {
+    ring: [124, 255, 170],
+    fill: [57, 255, 136],
+    sweep: [215, 255, 167],
+  },
+  abyss: {
+    ring: [139, 215, 255],
+    fill: [165, 96, 255],
+    sweep: [229, 195, 255],
+  },
+};
+const igniteBurstByTheme = {
+  inferno: {
+    core: [255, 214, 112],
+    ring: [255, 106, 61],
+    ember: [255, 145, 48],
+  },
+  toxic: {
+    core: [223, 255, 143],
+    ring: [57, 255, 136],
+    ember: [137, 255, 116],
+  },
+  abyss: {
+    core: [235, 195, 255],
+    ring: [165, 96, 255],
+    ember: [122, 196, 255],
+  },
+};
+const shieldPulseByTheme = {
+  inferno: {
+    shell: [255, 214, 112],
+    ring: [255, 184, 81],
+    glow: [255, 238, 196],
+  },
+  toxic: {
+    shell: [190, 255, 118],
+    ring: [124, 255, 170],
+    glow: [230, 255, 204],
+  },
+  abyss: {
+    shell: [200, 184, 255],
+    ring: [139, 215, 255],
+    glow: [239, 229, 255],
+  },
+};
+const surgePulseByTheme = {
+  inferno: {
+    core: [255, 214, 112],
+    trail: [255, 106, 61],
+    spark: [255, 238, 196],
+  },
+  toxic: {
+    core: [190, 255, 118],
+    trail: [57, 255, 136],
+    spark: [226, 255, 203],
+  },
+  abyss: {
+    core: [200, 184, 255],
+    trail: [139, 215, 255],
+    spark: [239, 229, 255],
+  },
+};
+const sceneImageByTheme = {
+  hydra: {
+    inferno: "./assets/scene-1.jpg",
+    toxic: "./assets/scene-1-toxic.jpg",
+    abyss: "./assets/scene-1-abyss.jpg",
+  },
+  warden: {
+    inferno: "./assets/scene-2.jpg",
+    toxic: "./assets/scene-2-toxic.jpg",
+    abyss: "./assets/scene-2-abyss.jpg",
+  },
+  river: {
+    inferno: "./assets/scene-3.jpg",
+    toxic: "./assets/scene-3-toxic.jpg",
+    abyss: "./assets/scene-3-abyss.jpg",
+  },
 };
 
 const loadUnlockedIndex = () => {
@@ -229,7 +350,18 @@ const state = {
 const game = {
   width: 960,
   height: 540,
-  player: { x: 480, y: 270, radius: 16, hp: 100, flash: 0 },
+  player: {
+    x: 480,
+    y: 270,
+    radius: 12,
+    hitOffsetY: 14,
+    hp: 100,
+    flash: 0,
+    direction: "right",
+    moveX: 0,
+    moveY: 0,
+    stride: 0,
+  },
   pickups: [],
   hazards: [],
   particles: [],
@@ -239,6 +371,20 @@ const game = {
   won: false,
   lost: false,
   scanPulse: 0,
+  scanPulseMax: 0,
+  igniteBurst: 0,
+  igniteBurstMax: 0,
+  shieldPulse: 0,
+  shieldPulseMax: 0,
+  surgePulse: 0,
+  surgePulseMax: 0,
+  actionState: {
+    scanUsed: false,
+    igniteCooldown: 0,
+    shieldCooldown: 0,
+    surgeUsed: false,
+    surgeTimer: 0,
+  },
   hazardTimer: 0,
   pickupTimer: 0,
   hitCooldown: 0,
@@ -260,6 +406,18 @@ let lastFrame = 0;
 let pendingVictoryNextScene = null;
 
 const ctx = gameCanvas ? gameCanvas.getContext("2d") : null;
+const characterSprite = new Image();
+const characterSpriteState = {
+  currentTheme: state.theme,
+  currentImage: characterSprite,
+  previousImage: null,
+  mix: 1,
+  requestId: 0,
+};
+characterSprite.src = characterSpriteByTheme[state.theme] || characterSpriteByTheme.inferno;
+if (ctx) {
+  ctx.imageSmoothingEnabled = true;
+}
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -538,11 +696,81 @@ const setGameCenterMessage = (title, copy, visible = true) => {
   gameCenterNode.classList.toggle("is-hidden", !visible);
 };
 
+const getActionCooldown = (action) => {
+  if (action === "ignite") {
+    return game.actionState.igniteCooldown;
+  }
+
+  if (action === "shield") {
+    return game.actionState.shieldCooldown;
+  }
+
+  return 0;
+};
+
+const getActionAvailability = (action) => {
+  if (action === "scan" && game.actionState.scanUsed) {
+    return {
+      ready: false,
+      reason: "used",
+    };
+  }
+
+  if (action === "surge" && game.actionState.surgeUsed) {
+    return {
+      ready: false,
+      reason: "used",
+    };
+  }
+
+  const cooldown = getActionCooldown(action);
+  if (cooldown > 0) {
+    return {
+      ready: false,
+      reason: "cooldown",
+      seconds: Math.ceil(cooldown),
+    };
+  }
+
+  return {
+    ready: true,
+    reason: "ready",
+  };
+};
+
+const renderActionButtons = () => {
+  actionButtons.forEach((button) => {
+    const action = button.dataset.action;
+    const config = actionConfig[action];
+    if (!config) {
+      return;
+    }
+
+    const availability = getActionAvailability(action);
+    let suffix = "";
+
+    if (availability.reason === "used") {
+      suffix = " • USED";
+    } else if (availability.reason === "cooldown") {
+      suffix = ` • ${availability.seconds}s`;
+    }
+
+    suffix = suffix.replace("â€¢", "-").replace("•", "-");
+    button.textContent = `[${config.hotkey}] ${config.label}${suffix}`;
+    button.disabled = game.running && !availability.ready;
+    button.classList.toggle(
+      "is-cooling",
+      game.running && (availability.reason === "cooldown" || availability.reason === "used")
+    );
+  });
+};
+
 const updateMissionStats = () => {
   const scene = scenes[state.currentScene];
   state.shield = clamp(game.player.hp, 0, 100);
   state.sync = clamp((game.collected / game.target) * 100, 0, 100);
   renderMeters();
+  renderActionButtons();
   setGameBanner(
     game.running
       ? `RUNNING // ${scene.title}`
@@ -581,7 +809,7 @@ const updateMissionStats = () => {
 
   setGameCenterMessage(
     "Press Space To Start Mission",
-    "Use WASD or arrow keys to move. Q W E trigger abilities.",
+    "Use WASD or arrow keys to move. 1 2 3 4 trigger abilities.",
     true
   );
 };
@@ -591,6 +819,73 @@ const resetPlayer = () => {
   game.player.y = game.height * 0.5;
   game.player.hp = 100;
   game.player.flash = 0;
+  game.player.direction = "right";
+  game.player.moveX = 0;
+  game.player.moveY = 0;
+  game.player.stride = 0;
+};
+
+const getPlayerHitPoint = () => ({
+  x: game.player.x,
+  y: game.player.y + game.player.hitOffsetY,
+});
+
+const resizeGameCanvas = () => {
+  if (!gameCanvas || !gameViewport) {
+    return;
+  }
+
+  const nextWidth = Math.max(320, Math.round(gameViewport.clientWidth));
+  const nextHeight = Math.max(220, Math.round(gameViewport.clientHeight));
+
+  if (!nextWidth || !nextHeight) {
+    return;
+  }
+
+  const previousWidth = game.width;
+  const previousHeight = game.height;
+
+  if (gameCanvas.width === nextWidth && gameCanvas.height === nextHeight) {
+    return;
+  }
+
+  gameCanvas.width = nextWidth;
+  gameCanvas.height = nextHeight;
+  game.width = nextWidth;
+  game.height = nextHeight;
+
+  if (ctx) {
+    ctx.imageSmoothingEnabled = true;
+  }
+
+  if (!previousWidth || !previousHeight) {
+    resetPlayer();
+    return;
+  }
+
+  const scaleX = nextWidth / previousWidth;
+  const scaleY = nextHeight / previousHeight;
+
+  game.player.x *= scaleX;
+  game.player.y *= scaleY;
+
+  game.pickups.forEach((pickup) => {
+    pickup.x *= scaleX;
+    pickup.y *= scaleY;
+  });
+
+  game.hazards.forEach((hazard) => {
+    hazard.x *= scaleX;
+    hazard.y *= scaleY;
+  });
+
+  game.particles.forEach((particle) => {
+    particle.x *= scaleX;
+    particle.y *= scaleY;
+  });
+
+  game.player.x = clamp(game.player.x, 54, game.width - 54);
+  game.player.y = clamp(game.player.y, 54, game.height - 40);
 };
 
 const spawnParticle = (x, y, color, amount = 8) => {
@@ -674,6 +969,18 @@ const startMission = () => {
   game.won = false;
   game.lost = false;
   game.scanPulse = 0;
+  game.scanPulseMax = 0;
+  game.igniteBurst = 0;
+  game.igniteBurstMax = 0;
+  game.shieldPulse = 0;
+  game.shieldPulseMax = 0;
+  game.surgePulse = 0;
+  game.surgePulseMax = 0;
+  game.actionState.scanUsed = false;
+  game.actionState.igniteCooldown = 0;
+  game.actionState.shieldCooldown = 0;
+  game.actionState.surgeUsed = false;
+  game.actionState.surgeTimer = 0;
   game.hazardTimer = 0;
   game.pickupTimer = 0;
   game.hitCooldown = 0;
@@ -749,7 +1056,7 @@ const renderScene = (sceneId) => {
   sceneTitle.textContent = scene.title;
   sceneZone.textContent = scene.zone;
   sceneRisk.textContent = scene.risk;
-  sceneImage.src = scene.image;
+  swapSceneImage(sceneId, state.theme, true);
   sceneImage.alt = scene.alt;
   transmission.textContent = scene.transmission;
   objectiveTitle.textContent = scene.objectiveTitle;
@@ -809,6 +1116,84 @@ const swapBrandLogo = (theme) => {
   nextImage.src = nextSrc;
 };
 
+const getSceneImageSrc = (sceneId, theme) => {
+  const sceneThemeMap = sceneImageByTheme[sceneId];
+  if (sceneThemeMap && sceneThemeMap[theme]) {
+    return sceneThemeMap[theme];
+  }
+
+  return scenes[sceneId]?.image || "";
+};
+
+const swapSceneImage = (sceneId, theme, immediate = false) => {
+  if (!sceneImage || !scenes[sceneId]) {
+    return;
+  }
+
+  const nextSrc = getSceneImageSrc(sceneId, theme);
+  const currentSrc = sceneImage.getAttribute("src");
+
+  if (currentSrc === nextSrc) {
+    sceneImage.classList.remove("is-switching");
+    return;
+  }
+
+  if (immediate) {
+    sceneImage.classList.remove("is-switching");
+    sceneImage.src = nextSrc;
+    return;
+  }
+
+  const nextImage = new Image();
+  nextImage.onload = () => {
+    sceneImage.classList.add("is-switching");
+
+    window.setTimeout(() => {
+      sceneImage.src = nextSrc;
+
+      window.setTimeout(() => {
+        sceneImage.classList.remove("is-switching");
+      }, 40);
+    }, 150);
+  };
+  nextImage.src = nextSrc;
+};
+
+const swapCharacterSprite = (theme, immediate = false) => {
+  const nextSrc = characterSpriteByTheme[theme] || characterSpriteByTheme.inferno;
+  if (!nextSrc) {
+    return;
+  }
+
+  if (characterSpriteState.currentTheme === theme && characterSpriteState.mix >= 1) {
+    return;
+  }
+
+  const requestId = characterSpriteState.requestId + 1;
+  characterSpriteState.requestId = requestId;
+
+  const nextImage = new Image();
+  nextImage.onload = () => {
+    if (requestId !== characterSpriteState.requestId) {
+      return;
+    }
+
+    if (immediate || !characterSpriteState.currentImage?.complete) {
+      characterSpriteState.currentTheme = theme;
+      characterSpriteState.currentImage = nextImage;
+      characterSpriteState.previousImage = null;
+      characterSpriteState.mix = 1;
+      return;
+    }
+
+    characterSpriteState.currentTheme = theme;
+    characterSpriteState.previousImage = characterSpriteState.currentImage;
+    characterSpriteState.currentImage = nextImage;
+    characterSpriteState.mix = 0;
+  };
+  nextImage.src = nextSrc;
+};
+
 const applyTheme = (theme) => {
   if (!validThemes.has(theme)) {
     return;
@@ -818,6 +1203,8 @@ const applyTheme = (theme) => {
   document.body.dataset.theme = theme;
   saveTheme(theme);
   swapBrandLogo(theme);
+  swapSceneImage(state.currentScene, theme);
+  swapCharacterSprite(theme);
 
   themeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.themeOption === theme);
@@ -888,7 +1275,7 @@ const showVictoryScreen = ({ sceneId, nextSceneId }) => {
   victorySync.textContent = `${Math.round(state.sync)}%`;
   victoryRewards.innerHTML = rewards.map((item) => `<li>${item}</li>`).join("");
   if (victoryBackdrop) {
-    victoryBackdrop.style.backgroundImage = `linear-gradient(180deg, rgba(2, 8, 12, 0.36), rgba(0, 0, 0, 0.86)), url("${scene.image}")`;
+    victoryBackdrop.style.backgroundImage = `linear-gradient(180deg, rgba(2, 8, 12, 0.36), rgba(0, 0, 0, 0.86)), url("${getSceneImageSrc(sceneId, state.theme)}")`;
   }
   if (victoryContinueButton) {
     victoryContinueButton.textContent = nextSceneId ? "Continue" : "Stay In Archive";
@@ -955,15 +1342,32 @@ const startBootSequence = async () => {
 
 const applyAction = (action) => {
   if (!game.running) {
-    writeConsole("Deploy into a mission first. Press Space inside the viewport.");
+    writeConsole(actionDescriptions[action] || "Skill data unavailable.");
+    uiBeep("soft");
+    return;
+  }
+
+  const availability = getActionAvailability(action);
+  if (!availability.ready) {
+    if (availability.reason === "used" && action === "scan") {
+      writeConsole("Scan Zone can only be used once per mission.");
+    } else if (availability.reason === "used" && action === "surge") {
+      writeConsole("Dash Surge can only be used once per mission.");
+    } else if (availability.reason === "cooldown") {
+      writeConsole(`${actionConfig[action].label} cooling down. ${availability.seconds}s remaining.`);
+    }
     uiBeep("warn");
+    updateMissionStats();
     return;
   }
 
   if (action === "scan") {
+    game.actionState.scanUsed = true;
     game.scanPulse = 2.2;
+    game.scanPulseMax = 2.2;
     state.sync = clamp(state.sync + 6, 0, 100);
     writeConsole("Scan pulse emitted. Objectives highlighted for a short interval.");
+    spawnParticle(game.player.x, game.player.y - 10, "#ffffff", 10);
     uiBeep("soft");
   }
 
@@ -977,17 +1381,34 @@ const applyAction = (action) => {
       }
       return keep;
     });
+    game.actionState.igniteCooldown = actionConfig.ignite.cooldown;
+    game.igniteBurst = 0.72;
+    game.igniteBurstMax = 0.72;
     state.heat = clamp(state.heat + 8, 0, 100);
     writeConsole(`Ignite burst released. ${cleared} nearby hazards scorched.`);
     spawnParticle(game.player.x, game.player.y, "#ff8f2a", 18);
+    spawnParticle(game.player.x, game.player.y - 8, "#ffd463", 12);
     uiBeep("confirm");
   }
 
   if (action === "shield") {
-    game.player.hp = clamp(game.player.hp + 22, 0, 100);
-    writeConsole("Shield lattice reinforced. Hull integrity restored.");
+    game.actionState.shieldCooldown = actionConfig.shield.cooldown;
+    game.shieldPulse = 1.05;
+    game.shieldPulseMax = 1.05;
+    game.player.hp = clamp(game.player.hp + 50, 0, 100);
+    writeConsole("Shield lattice reinforced. Hull integrity restored by 50%.");
     spawnParticle(game.player.x, game.player.y, "#7cffda", 16);
     uiBeep("warn");
+  }
+
+  if (action === "surge") {
+    game.actionState.surgeUsed = true;
+    game.actionState.surgeTimer = 1;
+    game.surgePulse = 1;
+    game.surgePulseMax = 1;
+    writeConsole("Dash Surge engaged. Movement speed doubled for 1 second.");
+    spawnParticle(game.player.x, game.player.y - 6, "#ffffff", 14);
+    uiBeep("confirm");
   }
 
   updateMissionStats();
@@ -1025,7 +1446,7 @@ const drawIdleOverlay = () => {
   ctx.strokeRect(36, 36, game.width - 72, game.height - 72);
 };
 
-const drawPlayer = () => {
+const drawFallbackPlayer = () => {
   const flicker = Math.sin(game.elapsed * 10) * 2;
   ctx.save();
   ctx.translate(game.player.x, game.player.y);
@@ -1040,6 +1461,113 @@ const drawPlayer = () => {
   ctx.lineTo(-7, -4);
   ctx.closePath();
   ctx.fill();
+  ctx.restore();
+};
+
+const drawPlayer = () => {
+  const activeSprite = characterSpriteState.currentImage;
+  const previousSprite = characterSpriteState.previousImage;
+  if (!activeSprite?.complete || !activeSprite.naturalWidth) {
+    drawFallbackPlayer();
+    return;
+  }
+
+  const moving = Math.hypot(game.player.moveX, game.player.moveY) > 0.05 && game.running;
+  const step = moving ? Math.sin(game.player.stride) : 0;
+  const bob = moving
+    ? Math.abs(Math.sin(game.player.stride * 1.35)) * 7
+    : Math.sin(game.elapsed * 2.4) * 1.5;
+  const glowPulse = 0.22 + Math.abs(Math.sin(game.elapsed * 3.8)) * 0.18;
+  const glowPalette = characterGlowByTheme[state.theme] || characterGlowByTheme.inferno;
+
+  let scaleX = 1;
+  let rotation = 0;
+  let lift = 0;
+
+  if (game.player.direction === "left") {
+    scaleX = -1;
+    rotation = -0.05;
+  } else if (game.player.direction === "right") {
+    rotation = 0.05;
+  } else if (game.player.direction === "up") {
+    rotation = -0.025;
+    lift = -6;
+  } else if (game.player.direction === "down") {
+    rotation = 0.02;
+    lift = 4;
+  }
+
+  if (moving) {
+    rotation += step * 0.05;
+  }
+
+  const spriteScale = 0.085;
+  const drawWidth = activeSprite.naturalWidth * spriteScale;
+  const drawHeight = activeSprite.naturalHeight * spriteScale;
+  const drawX = -drawWidth / 2;
+  const drawY = -drawHeight + 28;
+
+  const drawSpriteImage = (image, alpha = 1) => {
+    if (!image?.complete || !image.naturalWidth) {
+      return;
+    }
+
+    const imageWidth = image.naturalWidth * spriteScale;
+    const imageHeight = image.naturalHeight * spriteScale;
+    const imageX = -imageWidth / 2;
+    const imageY = -imageHeight + 28;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (scaleX < 0) {
+      ctx.scale(-1, 1);
+      ctx.drawImage(image, -imageWidth / 2, imageY, imageWidth, imageHeight);
+    } else {
+      ctx.drawImage(image, imageX, imageY, imageWidth, imageHeight);
+    }
+
+    ctx.restore();
+  };
+
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 34, 17, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const glow = ctx.createRadialGradient(0, -6, 4, 0, -6, 54);
+  glow.addColorStop(
+    0,
+    `rgba(${glowPalette.inner[0]}, ${glowPalette.inner[1]}, ${glowPalette.inner[2]}, ${0.26 + glowPulse})`
+  );
+  glow.addColorStop(
+    0.55,
+    `rgba(${glowPalette.outer[0]}, ${glowPalette.outer[1]}, ${glowPalette.outer[2]}, ${0.18 + glowPulse * 0.45})`
+  );
+  glow.addColorStop(
+    1,
+    `rgba(${glowPalette.outer[0]}, ${glowPalette.outer[1]}, ${glowPalette.outer[2]}, 0)`
+  );
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, -8, 54, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.translate(0, bob + lift - 2);
+  ctx.rotate(rotation);
+
+  if (game.player.flash > 0) {
+    drawSpriteImage(activeSprite, 0.42);
+    ctx.globalCompositeOperation = "screen";
+  }
+
+  if (previousSprite && characterSpriteState.mix < 1) {
+    drawSpriteImage(previousSprite, 1 - characterSpriteState.mix);
+  }
+  drawSpriteImage(activeSprite, characterSpriteState.mix);
   ctx.restore();
 };
 
@@ -1089,28 +1617,297 @@ const drawParticles = () => {
   ctx.globalAlpha = 1;
 };
 
+const drawScanPulse = () => {
+  if (!game.scanPulse || !game.scanPulseMax) {
+    return;
+  }
+
+  const progress = 1 - game.scanPulse / game.scanPulseMax;
+  const alpha = Math.max(0, game.scanPulse / game.scanPulseMax);
+  const radius = 34 + progress * 210;
+  const sweepAngle = -Math.PI * 0.5 + progress * Math.PI * 2.1;
+  const palette = scanPulseByTheme[state.theme] || scanPulseByTheme.inferno;
+
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y + 4);
+  ctx.globalCompositeOperation = "screen";
+
+  const fillGradient = ctx.createRadialGradient(0, 0, 10, 0, 0, radius);
+  fillGradient.addColorStop(
+    0,
+    `rgba(${palette.fill[0]}, ${palette.fill[1]}, ${palette.fill[2]}, ${0.16 * alpha})`
+  );
+  fillGradient.addColorStop(
+    0.55,
+    `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.08 * alpha})`
+  );
+  fillGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = fillGradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.8 * alpha})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(${palette.sweep[0]}, ${palette.sweep[1]}, ${palette.sweep[2]}, ${0.55 * alpha})`;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(18, radius - 24), 0, Math.PI * 2);
+  ctx.stroke();
+
+  const sweepGradient = ctx.createRadialGradient(0, 0, radius * 0.15, 0, 0, radius);
+  sweepGradient.addColorStop(
+    0,
+    `rgba(${palette.sweep[0]}, ${palette.sweep[1]}, ${palette.sweep[2]}, 0.24)`
+  );
+  sweepGradient.addColorStop(
+    1,
+    `rgba(${palette.sweep[0]}, ${palette.sweep[1]}, ${palette.sweep[2]}, 0)`
+  );
+  ctx.fillStyle = sweepGradient;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.arc(0, 0, radius, sweepAngle - 0.34, sweepAngle + 0.16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(${palette.sweep[0]}, ${palette.sweep[1]}, ${palette.sweep[2]}, ${0.9 * alpha})`;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(sweepAngle) * radius, Math.sin(sweepAngle) * radius);
+  ctx.stroke();
+
+  ctx.restore();
+};
+
+const drawIgniteBurst = () => {
+  if (!game.igniteBurst || !game.igniteBurstMax) {
+    return;
+  }
+
+  const progress = 1 - game.igniteBurst / game.igniteBurstMax;
+  const alpha = Math.max(0, game.igniteBurst / game.igniteBurstMax);
+  const radius = 30 + progress * 116;
+  const innerRadius = Math.max(12, radius * 0.34);
+  const palette = igniteBurstByTheme[state.theme] || igniteBurstByTheme.inferno;
+
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y + 6);
+  ctx.globalCompositeOperation = "screen";
+
+  const core = ctx.createRadialGradient(0, 0, 8, 0, 0, radius);
+  core.addColorStop(
+    0,
+    `rgba(${palette.core[0]}, ${palette.core[1]}, ${palette.core[2]}, ${0.34 * alpha})`
+  );
+  core.addColorStop(
+    0.4,
+    `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.24 * alpha})`
+  );
+  core.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineWidth = 4.5 - progress * 2.1;
+  ctx.strokeStyle = `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.86 * alpha})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = `rgba(${palette.core[0]}, ${palette.core[1]}, ${palette.core[2]}, ${0.72 * alpha})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const spikeCount = 12;
+  for (let i = 0; i < spikeCount; i += 1) {
+    const angle = (Math.PI * 2 * i) / spikeCount + game.elapsed * 0.8;
+    const variance = Math.sin(game.elapsed * 22 + i * 1.7) * 12;
+    const start = innerRadius + (i % 2) * 8;
+    const end = radius + 18 + variance;
+
+    ctx.strokeStyle = `rgba(${palette.ember[0]}, ${palette.ember[1]}, ${palette.ember[2]}, ${0.55 * alpha})`;
+    ctx.lineWidth = i % 2 === 0 ? 3 : 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * start, Math.sin(angle) * start);
+    ctx.lineTo(Math.cos(angle) * end, Math.sin(angle) * end);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+};
+
+const drawShieldPulse = () => {
+  if (!game.shieldPulse || !game.shieldPulseMax) {
+    return;
+  }
+
+  const progress = 1 - game.shieldPulse / game.shieldPulseMax;
+  const alpha = Math.max(0, game.shieldPulse / game.shieldPulseMax);
+  const palette = shieldPulseByTheme[state.theme] || shieldPulseByTheme.inferno;
+  const shellWidth = 46 + progress * 10;
+  const shellHeight = 58 + progress * 12;
+  const rise = progress * 10;
+
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y - 2 - rise);
+  ctx.globalCompositeOperation = "screen";
+
+  const shell = ctx.createRadialGradient(0, 6, 10, 0, 6, shellHeight);
+  shell.addColorStop(
+    0,
+    `rgba(${palette.glow[0]}, ${palette.glow[1]}, ${palette.glow[2]}, ${0.12 * alpha})`
+  );
+  shell.addColorStop(
+    0.5,
+    `rgba(${palette.shell[0]}, ${palette.shell[1]}, ${palette.shell[2]}, ${0.18 * alpha})`
+  );
+  shell.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = shell;
+  ctx.beginPath();
+  ctx.ellipse(0, 8, shellWidth, shellHeight, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.78 * alpha})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, 8, shellWidth, shellHeight, 0, Math.PI * 1.04, Math.PI * 1.96);
+  ctx.stroke();
+
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = `rgba(${palette.glow[0]}, ${palette.glow[1]}, ${palette.glow[2]}, ${0.62 * alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(0, 8, shellWidth - 10, shellHeight - 12, 0, Math.PI * 1.08, Math.PI * 1.92);
+  ctx.stroke();
+
+  const ringOffsets = [-22, 0, 22];
+  ringOffsets.forEach((offset, index) => {
+    ctx.strokeStyle = `rgba(${palette.shell[0]}, ${palette.shell[1]}, ${palette.shell[2]}, ${0.28 * alpha})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(offset, 8, 8 + index * 2, shellHeight - 18, 0, Math.PI * 1.18, Math.PI * 1.82);
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle = `rgba(${palette.ring[0]}, ${palette.ring[1]}, ${palette.ring[2]}, ${0.72 * alpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 44, shellWidth * 0.7, 10 + progress * 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+};
+
+const drawSurgePulse = () => {
+  if (!game.actionState.surgeTimer && !game.surgePulse) {
+    return;
+  }
+
+  const alpha = Math.max(
+    game.actionState.surgeTimer > 0 ? game.actionState.surgeTimer : 0,
+    game.surgePulseMax ? game.surgePulse / game.surgePulseMax : 0
+  );
+  const palette = surgePulseByTheme[state.theme] || surgePulseByTheme.inferno;
+  const dirX = game.player.moveX || (game.player.direction === "left" ? -1 : game.player.direction === "right" ? 1 : 0);
+  const dirY = game.player.moveY || (game.player.direction === "up" ? -1 : game.player.direction === "down" ? 1 : 0);
+  const length = Math.hypot(dirX, dirY) || 1;
+  const nx = dirX / length;
+  const ny = dirY / length;
+  const tailX = -nx * 42;
+  const tailY = -ny * 42;
+
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y - 6);
+  ctx.globalCompositeOperation = "screen";
+
+  const core = ctx.createRadialGradient(0, 0, 6, 0, 0, 52);
+  core.addColorStop(0, `rgba(${palette.spark[0]}, ${palette.spark[1]}, ${palette.spark[2]}, ${0.22 * alpha})`);
+  core.addColorStop(0.45, `rgba(${palette.core[0]}, ${palette.core[1]}, ${palette.core[2]}, ${0.18 * alpha})`);
+  core.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(0, 0, 52, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(${palette.trail[0]}, ${palette.trail[1]}, ${palette.trail[2]}, ${0.6 * alpha})`;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(tailX, tailY);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(${palette.spark[0]}, ${palette.spark[1]}, ${palette.spark[2]}, ${0.7 * alpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(nx * 10, ny * 10);
+  ctx.lineTo(-nx * 56, -ny * 56);
+  ctx.stroke();
+
+  for (let i = 0; i < 3; i += 1) {
+    const offset = 14 + i * 10;
+    ctx.strokeStyle = `rgba(${palette.core[0]}, ${palette.core[1]}, ${palette.core[2]}, ${(0.28 - i * 0.06) * alpha})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(-nx * offset, -ny * offset, 14 + i * 5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+};
+
 const updatePlayer = (dt) => {
   const sceneConfig = scenes[state.currentScene].game;
-  const speed = sceneConfig.playerSpeed;
+  const speedMultiplier = game.actionState.surgeTimer > 0 ? 2 : 1;
+  const speed = sceneConfig.playerSpeed * speedMultiplier;
   const moveX = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
   const moveY = (keys.arrowdown || keys.s ? 1 : 0) - (keys.arrowup || keys.w ? 1 : 0);
   const length = Math.hypot(moveX, moveY) || 1;
+  const normalizedMoveX = moveX / length;
+  const normalizedMoveY = moveY / length;
+  const moving = Math.hypot(moveX, moveY) > 0;
 
-  game.player.x += (moveX / length) * speed * dt + game.currentPushX * dt;
-  game.player.y += (moveY / length) * speed * dt;
+  game.player.moveX = moving ? normalizedMoveX : 0;
+  game.player.moveY = moving ? normalizedMoveY : 0;
+
+  if (moving) {
+    if (Math.abs(moveX) >= Math.abs(moveY)) {
+      game.player.direction = moveX > 0 ? "right" : "left";
+    } else {
+      game.player.direction = moveY > 0 ? "down" : "up";
+    }
+
+    game.player.stride += dt * 10 * speedMultiplier;
+  } else {
+    game.player.stride += dt * 2.4;
+  }
+
+  game.player.x += normalizedMoveX * speed * dt + game.currentPushX * dt;
+  game.player.y += normalizedMoveY * speed * dt;
 
   if (state.currentScene === "river") {
     game.player.y += Math.sin(game.elapsed * 2.4 + game.player.x * 0.01) * 24 * dt;
   }
 
-  game.player.x = clamp(game.player.x, 24, game.width - 24);
-  game.player.y = clamp(game.player.y, 24, game.height - 24);
+  game.player.x = clamp(game.player.x, 54, game.width - 54);
+  game.player.y = clamp(game.player.y, 54, game.height - 40);
 };
 
 const updatePickups = () => {
+  const hitPoint = getPlayerHitPoint();
+
   for (let i = game.pickups.length - 1; i >= 0; i -= 1) {
     const pickup = game.pickups[i];
-    const hit = Math.hypot(pickup.x - game.player.x, pickup.y - game.player.y) < pickup.radius + game.player.radius;
+    const hit =
+      Math.hypot(pickup.x - hitPoint.x, pickup.y - hitPoint.y) <
+      pickup.radius + game.player.radius;
     if (!hit) {
       continue;
     }
@@ -1132,6 +1929,8 @@ const updatePickups = () => {
 };
 
 const updateHazards = (dt) => {
+  const hitPoint = getPlayerHitPoint();
+
   game.hazardTimer -= dt;
   const spawnRate =
     state.currentScene === "hydra" ? 0.78 : state.currentScene === "warden" ? 0.52 : 0.66;
@@ -1166,7 +1965,9 @@ const updateHazards = (dt) => {
   }
 
   for (const hazard of game.hazards) {
-    const hit = Math.hypot(hazard.x - game.player.x, hazard.y - game.player.y) < hazard.radius + game.player.radius;
+    const hit =
+      Math.hypot(hazard.x - hitPoint.x, hazard.y - hitPoint.y) <
+      hazard.radius + game.player.radius;
     if (!hit) {
       continue;
     }
@@ -1176,7 +1977,7 @@ const updateHazards = (dt) => {
     state.heat = clamp(state.heat + (state.currentScene === "warden" ? 10 : 6), 0, 100);
     game.hitCooldown = 0.7;
     game.player.flash = 0.16;
-    spawnParticle(game.player.x, game.player.y, "#ffffff", 14);
+    spawnParticle(hitPoint.x, hitPoint.y, "#ffffff", 14);
     uiBeep("warn");
     writeConsole(`Impact detected in ${scenes[state.currentScene].title}. Integrity reduced.`);
 
@@ -1211,6 +2012,10 @@ const drawGame = () => {
 
   game.pickups.forEach(drawPickup);
   game.hazards.forEach(drawHazard);
+  drawScanPulse();
+  drawIgniteBurst();
+  drawShieldPulse();
+  drawSurgePulse();
   drawParticles();
   drawPlayer();
 
@@ -1220,6 +2025,13 @@ const drawGame = () => {
 };
 
 const updateGame = (dt) => {
+  if (characterSpriteState.mix < 1) {
+    characterSpriteState.mix = Math.min(1, characterSpriteState.mix + dt * 4.8);
+    if (characterSpriteState.mix >= 1) {
+      characterSpriteState.previousImage = null;
+    }
+  }
+
   if (!game.running) {
     drawGame();
     return;
@@ -1227,6 +2039,12 @@ const updateGame = (dt) => {
 
   game.elapsed += dt;
   game.scanPulse = Math.max(0, game.scanPulse - dt);
+  game.igniteBurst = Math.max(0, game.igniteBurst - dt);
+  game.shieldPulse = Math.max(0, game.shieldPulse - dt);
+  game.surgePulse = Math.max(0, game.surgePulse - dt);
+  game.actionState.igniteCooldown = Math.max(0, game.actionState.igniteCooldown - dt);
+  game.actionState.shieldCooldown = Math.max(0, game.actionState.shieldCooldown - dt);
+  game.actionState.surgeTimer = Math.max(0, game.actionState.surgeTimer - dt);
   state.heat = clamp(state.heat + (state.currentScene === "warden" ? 2.8 : 1.1) * dt, 0, 100);
 
   updatePlayer(dt);
@@ -1301,27 +2119,19 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (key === "1") {
-    renderScene("hydra");
-  }
-
-  if (key === "2") {
-    renderScene("warden");
-  }
-
-  if (key === "3") {
-    renderScene("river");
-  }
-
-  if (key === "q") {
     applyAction("scan");
   }
 
-  if (key === "w") {
+  if (key === "2") {
     applyAction("ignite");
   }
 
-  if (key === "e") {
+  if (key === "3") {
     applyAction("shield");
+  }
+
+  if (key === "4") {
+    applyAction("surge");
   }
 });
 
@@ -1375,11 +2185,13 @@ const updateClock = () => {
 };
 
 applyTheme(state.theme);
+resizeGameCanvas();
 renderSceneLocks();
 renderScene(state.currentScene);
 renderMeters();
 updateClock();
 window.setInterval(updateClock, 1000);
+window.addEventListener("resize", resizeGameCanvas);
 
 if (ctx && !gameRaf) {
   gameRaf = window.requestAnimationFrame(tick);
