@@ -169,6 +169,7 @@
 :root {
   --bg: #140904;
   --bg-deep: #070201;
+  --boot-bg-image: url("./assets/hh-bg-website-4k.png");
   --panel: rgba(30, 11, 7, 0.88);
   --panel-soft: rgba(40, 14, 8, 0.78);
   --line: rgba(255, 156, 82, 0.24);
@@ -203,6 +204,7 @@
 body[data-theme="inferno"] {
   --bg: #140904;
   --bg-deep: #070201;
+  --boot-bg-image: url("./assets/hh-bg-website-4k.png");
   --panel: rgba(30, 11, 7, 0.88);
   --panel-soft: rgba(40, 14, 8, 0.78);
   --line: rgba(255, 156, 82, 0.24);
@@ -236,6 +238,7 @@ body[data-theme="inferno"] {
 body[data-theme="toxic"] {
   --bg: #06130d;
   --bg-deep: #020806;
+  --boot-bg-image: url("./assets/hh-bg-website-4k-toxic.jpg");
   --panel: rgba(7, 22, 15, 0.88);
   --panel-soft: rgba(10, 28, 18, 0.78);
   --line: rgba(177, 255, 93, 0.24);
@@ -269,6 +272,7 @@ body[data-theme="toxic"] {
 body[data-theme="abyss"] {
   --bg: #0a0d1f;
   --bg-deep: #030410;
+  --boot-bg-image: url("./assets/hh-bg-website-4k-abyss.jpg");
   --panel: rgba(10, 14, 31, 0.88);
   --panel-soft: rgba(15, 20, 42, 0.76);
   --line: rgba(141, 168, 255, 0.22);
@@ -301,6 +305,7 @@ body[data-theme="abyss"] {
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -348,6 +353,17 @@ body {
     --boot-charge-tail 420ms ease,
     --boot-button-glow-a 420ms ease,
     --boot-button-glow-b 420ms ease;
+}
+
+body,
+body * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+img,
+canvas {
+  -webkit-user-drag: none;
 }
 
 body *,
@@ -492,9 +508,21 @@ body.is-booting .arcade-shell {
   padding: 1rem;
   background:
     linear-gradient(180deg, var(--boot-overlay-top), var(--boot-overlay-bottom)),
-    radial-gradient(circle at center, var(--boot-radial), transparent 22%),
-    url("./assets/hh-bg-website-4k.png") center / cover no-repeat;
+    radial-gradient(circle at center, var(--boot-radial), transparent 22%);
   transition: opacity 500ms ease, visibility 500ms ease;
+}
+
+.boot-screen__bg {
+  position: absolute;
+  inset: 0;
+  background: var(--boot-bg-image) center / cover no-repeat;
+  transition: opacity 280ms ease, transform 420ms ease, filter 420ms ease;
+}
+
+.boot-screen__bg.is-switching {
+  opacity: 0.18;
+  transform: scale(1.02);
+  filter: saturate(1.06);
 }
 
 .victory-screen {
@@ -514,6 +542,70 @@ body.is-booting .arcade-shell {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+.fullscreen-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 220ms ease, visibility 220ms ease;
+}
+
+.fullscreen-prompt.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.fullscreen-prompt__backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 184, 81, 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(2, 8, 12, 0.34), rgba(0, 0, 0, 0.82));
+  backdrop-filter: blur(6px);
+}
+
+.fullscreen-prompt__card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 620px);
+  padding: 1.4rem;
+  border: 1px solid rgba(255, 184, 81, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 184, 81, 0.08)),
+    rgba(6, 14, 20, 0.94);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 26px 60px rgba(0, 0, 0, 0.5);
+}
+
+.fullscreen-prompt__title {
+  margin: 0;
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fullscreen-prompt__copy {
+  margin: 0.95rem 0 0;
+  max-width: 50ch;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.fullscreen-prompt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
 }
 
 .victory-screen__backdrop {
@@ -612,6 +704,8 @@ body.is-booting .arcade-shell {
 }
 
 .boot-screen__core {
+  position: relative;
+  z-index: 1;
   width: min(100%, 760px);
   padding: 1.4rem;
   border: 1px solid rgba(124, 255, 218, 0.22);
@@ -655,6 +749,111 @@ body.is-booting .arcade-shell {
   max-width: 54ch;
   margin: 1rem auto 0;
   line-height: 1.8;
+}
+
+.boot-theme-stage {
+  margin-top: 1.6rem;
+}
+
+.boot-seq-item {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  transition:
+    opacity 980ms ease,
+    transform 980ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 980ms ease;
+  will-change: opacity, transform, filter;
+}
+
+.boot-seq-item.is-seq-hidden {
+  opacity: 0;
+  transform: translateY(28px) scale(0.98);
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+.boot-theme-head {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.boot-theme-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.boot-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.boot-theme-card {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  min-height: 240px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.16)),
+    rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.boot-theme-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line);
+}
+
+.boot-theme-card.is-active {
+  border-color: var(--line-strong);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 184, 81, 0.08)),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 28px rgba(0, 0, 0, 0.18);
+}
+
+.boot-theme-card__icon {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 18px var(--logo-glow-a));
+}
+
+.boot-theme-card__title {
+  display: block;
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.boot-theme-card__copy {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.75;
+}
+
+.boot-theme-actions {
+  display: grid;
+  place-items: center;
+  margin-top: 1.2rem;
+}
+
+.boot-button--confirm {
+  min-width: 260px;
 }
 
 .boot-window {
@@ -852,6 +1051,21 @@ body.is-booting .arcade-shell {
   padding: 0.7rem 0.9rem;
   border: 1px solid rgba(255, 184, 81, 0.14);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.status-pill--button {
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.status-pill--button:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 184, 81, 0.08)),
+    rgba(255, 255, 255, 0.03);
 }
 
 .status-pill strong {
@@ -1333,6 +1547,14 @@ body.is-booting .arcade-shell {
 
   .theme-switcher {
     min-width: 0;
+  }
+
+  .boot-theme-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .boot-theme-card {
+    min-height: 0;
   }
 
   .viewport {

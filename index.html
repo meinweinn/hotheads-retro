@@ -14,32 +14,65 @@
     <div class="crt-overlay" aria-hidden="true"></div>
 
     <section class="boot-screen" data-boot-screen>
+      <div class="boot-screen__bg" data-boot-bg></div>
       <div class="boot-screen__core">
         <p class="boot-label">HOTHEADS BIOS v03</p>
         <h1 class="boot-title">Infernal Quest Console</h1>
         <p class="boot-subtitle">Pixel archive ready. Audio channel locked behind user input.</p>
 
-        <div class="boot-window">
-          <div class="boot-window__head">
-            <span>BOOT.LOG</span>
-            <span>HOLD TO IGNITE</span>
+        <div class="boot-theme-stage" data-boot-theme-stage>
+          <div class="boot-theme-head">
+            <p class="chip">Select Theme</p>
+            <p class="boot-theme-copy">Choose the visual atmosphere for your archive run before ignition.</p>
           </div>
-
-          <div class="boot-lines" data-boot-lines>
-            <p>> Waiting for ignition handshake...</p>
+          <div class="boot-theme-grid" role="tablist" aria-label="Boot theme selector">
+            <button class="boot-theme-card is-active" type="button" data-theme-option="inferno" aria-label="Inferno theme">
+              <img src="./assets/inferno-icon.png" alt="" class="boot-theme-card__icon" />
+              <span class="boot-theme-card__title">Inferno</span>
+              <span class="boot-theme-card__copy">Molten ember glow and volcanic archive lighting.</span>
+            </button>
+            <button class="boot-theme-card" type="button" data-theme-option="toxic" aria-label="Toxic theme">
+              <img src="./assets/toxic-icon.png" alt="" class="boot-theme-card__icon" />
+              <span class="boot-theme-card__title">Toxic</span>
+              <span class="boot-theme-card__copy">Reactor green signals and corrosive dungeon haze.</span>
+            </button>
+            <button class="boot-theme-card" type="button" data-theme-option="abyss" aria-label="Abyss theme">
+              <img src="./assets/abyss-icon.png" alt="" class="boot-theme-card__icon" />
+              <span class="boot-theme-card__title">Abyss</span>
+              <span class="boot-theme-card__copy">Cold void tones with spectral blue-violet energy.</span>
+            </button>
           </div>
-
-          <div class="boot-progress">
-            <span class="boot-progress__bar" data-boot-progress></span>
+          <div class="boot-theme-actions">
+            <button class="boot-button boot-button--confirm" type="button" data-boot-theme-confirm>
+              <span class="boot-button__lava" data-boot-theme-fill></span>
+              <span class="boot-button__label">Confirm Theme</span>
+            </button>
           </div>
         </div>
 
-        <div class="boot-actions">
-          <button class="boot-button" type="button" data-boot-start>
-            <span class="boot-button__lava" data-boot-fill></span>
-            <span class="boot-button__label" data-boot-label>Hold To Start</span>
-          </button>
-          <p class="boot-hint">Press and hold the button until the lava charge reaches 100%.</p>
+        <div class="boot-ignite-stage" data-boot-ignite-stage hidden>
+          <div class="boot-window">
+            <div class="boot-window__head">
+              <span>BOOT.LOG</span>
+              <span>HOLD TO IGNITE</span>
+            </div>
+
+            <div class="boot-lines" data-boot-lines>
+              <p>> Theme locked. Waiting for ignition handshake...</p>
+            </div>
+
+            <div class="boot-progress">
+              <span class="boot-progress__bar" data-boot-progress></span>
+            </div>
+          </div>
+
+          <div class="boot-actions">
+            <button class="boot-button" type="button" data-boot-start>
+              <span class="boot-button__lava" data-boot-fill></span>
+              <span class="boot-button__label" data-boot-label>Hold To Start</span>
+            </button>
+            <p class="boot-hint">Press and hold the button until the lava charge reaches 100%.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -84,6 +117,21 @@
       </div>
     </section>
 
+    <section class="fullscreen-prompt" data-fullscreen-prompt aria-hidden="true">
+      <div class="fullscreen-prompt__backdrop"></div>
+      <div class="fullscreen-prompt__card">
+        <p class="chip">Display Mode</p>
+        <h2 class="fullscreen-prompt__title">Fullscreen Experience Recommended</h2>
+        <p class="fullscreen-prompt__copy">
+          This archive is designed to feel better in fullscreen. Open fullscreen now or continue in windowed mode.
+        </p>
+        <div class="fullscreen-prompt__actions">
+          <button class="choice-btn is-live" type="button" data-fullscreen-accept>Open Fullscreen</button>
+          <button class="choice-btn" type="button" data-fullscreen-dismiss>Continue Windowed</button>
+        </div>
+      </div>
+    </section>
+
     <main class="arcade-shell">
       <header class="topbar">
         <div class="brand-block">
@@ -115,16 +163,20 @@
           </div>
           <div class="status-pill">
             <span class="status-pill__label">Build</span>
-            <strong>v1.0.0</strong>
+            <strong>v0.1</strong>
           </div>
           <div class="status-pill">
             <span class="status-pill__label">Clock</span>
             <strong data-clock>--:--:--</strong>
           </div>
-          <div class="status-pill">
+          <button class="status-pill status-pill--button" type="button" data-audio-toggle>
             <span class="status-pill__label">Audio</span>
             <strong data-audio-status>Standby</strong>
-          </div>
+          </button>
+          <button class="status-pill status-pill--button" type="button" data-fullscreen-toggle>
+            <span class="status-pill__label">View</span>
+            <strong data-fullscreen-label>Fullscreen</strong>
+          </button>
         </div>
       </header>
 
@@ -207,7 +259,6 @@
 
             <div class="skill-head">
               <p class="chip">Skill Rack</p>
-              <p class="skill-copy">Trigger combat abilities with 1 2 3 4 or inspect them before a mission.</p>
             </div>
             <div class="command-row">
               <button class="action-btn" data-action="scan">[1] Scan Zone</button>

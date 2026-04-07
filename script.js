@@ -1,10 +1,21 @@
 const bootScreen = document.querySelector("[data-boot-screen]");
+const bootBackground = document.querySelector("[data-boot-bg]");
 const bootStartButton = document.querySelector("[data-boot-start]");
 const bootLinesNode = document.querySelector("[data-boot-lines]");
 const bootProgress = document.querySelector("[data-boot-progress]");
 const bootFill = document.querySelector("[data-boot-fill]");
 const bootLabel = document.querySelector("[data-boot-label]");
+const bootThemeStage = document.querySelector("[data-boot-theme-stage]");
+const bootIgniteStage = document.querySelector("[data-boot-ignite-stage]");
+const bootThemeConfirm = document.querySelector("[data-boot-theme-confirm]");
+const bootThemeFill = document.querySelector("[data-boot-theme-fill]");
 const audioStatus = document.querySelector("[data-audio-status]");
+const audioToggle = document.querySelector("[data-audio-toggle]");
+const fullscreenToggle = document.querySelector("[data-fullscreen-toggle]");
+const fullscreenLabel = document.querySelector("[data-fullscreen-label]");
+const fullscreenPrompt = document.querySelector("[data-fullscreen-prompt]");
+const fullscreenAccept = document.querySelector("[data-fullscreen-accept]");
+const fullscreenDismiss = document.querySelector("[data-fullscreen-dismiss]");
 const victoryScreen = document.querySelector("[data-victory-screen]");
 const victoryBackdrop = document.querySelector("[data-victory-backdrop]");
 const victoryChip = document.querySelector("[data-victory-chip]");
@@ -157,6 +168,11 @@ const logoByTheme = {
   inferno: "./assets/hotheads-logo-trans.png",
   toxic: "./assets/hotheads-logo-trans-toxic.png",
   abyss: "./assets/hotheads-logo-trans-abyss.png",
+};
+const bootBackgroundByTheme = {
+  inferno: "./assets/hh-bg-website-4k.png",
+  toxic: "./assets/hh-bg-website-4k-toxic.jpg",
+  abyss: "./assets/hh-bg-website-4k-abyss.jpg",
 };
 const characterSpriteByTheme = {
   inferno: "./assets/hothead-character.png",
@@ -395,6 +411,7 @@ const game = {
 const keys = Object.create(null);
 
 let audioContext = null;
+let audioEnabled = true;
 let holdTone = null;
 let holdProgress = 0;
 let holdAnimationFrame = 0;
@@ -404,9 +421,30 @@ let holdLastTick = 0;
 let gameRaf = 0;
 let lastFrame = 0;
 let pendingVictoryNextScene = null;
+let bootThemeConfirmed = false;
+let bootThemeHoldProgress = 0;
+let bootThemeHoldActive = false;
+let bootThemeHoldFrame = 0;
+let bootThemeHoldLastTick = 0;
+let bootBackgroundSwapId = 0;
+let themeVisualsReady = false;
+let bootThemeTransitioning = false;
 
 const ctx = gameCanvas ? gameCanvas.getContext("2d") : null;
 const characterSprite = new Image();
+const bootThemeSequenceItems = bootThemeStage
+  ? [
+      ...bootThemeStage.querySelectorAll(".boot-theme-actions"),
+      ...bootThemeStage.querySelectorAll(".boot-theme-card"),
+      ...bootThemeStage.querySelectorAll(".boot-theme-head"),
+    ]
+  : [];
+const bootIgniteSequenceItems = bootIgniteStage
+  ? [
+      ...bootIgniteStage.querySelectorAll(".boot-window"),
+      ...bootIgniteStage.querySelectorAll(".boot-actions"),
+    ]
+  : [];
 const characterSpriteState = {
   currentTheme: state.theme,
   currentImage: characterSprite,
@@ -423,10 +461,56 @@ const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const random = (min, max) => min + Math.random() * (max - min);
 
+const primeBootSequenceItems = (items, hidden = false) => {
+  items.forEach((item) => {
+    item.classList.add("boot-seq-item");
+    item.classList.toggle("is-seq-hidden", hidden);
+  });
+};
+
+const sequenceBootItemsOut = async (items, stepDelay = 280, settleDelay = 520) => {
+  for (const item of items) {
+    item.classList.add("is-seq-hidden");
+    await wait(stepDelay);
+  }
+
+  await wait(settleDelay);
+};
+
+const sequenceBootItemsIn = async (items, stepDelay = 260, settleDelay = 420) => {
+  items.forEach((item) => {
+    item.classList.add("boot-seq-item", "is-seq-hidden");
+  });
+
+  await wait(40);
+
+  for (const item of items) {
+    item.classList.remove("is-seq-hidden");
+    await wait(stepDelay);
+  }
+
+  await wait(settleDelay);
+};
+
+const updateAudioUi = () => {
+  if (audioStatus) {
+    audioStatus.textContent = audioEnabled ? "Enabled" : "Muted";
+  }
+
+  if (audioToggle) {
+    audioToggle.classList.toggle("is-cooling", !audioEnabled);
+  }
+};
+
 const ensureAudio = async () => {
+  if (!audioEnabled) {
+    updateAudioUi();
+    return null;
+  }
+
   if (!window.AudioContext && !window.webkitAudioContext) {
     if (audioStatus) {
-      audioStatus.textContent = "Muted";
+      audioStatus.textContent = "Unavailable";
     }
     return null;
   }
@@ -440,9 +524,7 @@ const ensureAudio = async () => {
     await audioContext.resume();
   }
 
-  if (audioStatus) {
-    audioStatus.textContent = "Enabled";
-  }
+  updateAudioUi();
 
   return audioContext;
 };
@@ -517,6 +599,79 @@ const uiBeep = (kind = "soft") => {
   }
 };
 
+const updateFullscreenLabel = () => {
+  if (!fullscreenLabel) {
+    return;
+  }
+
+  fullscreenLabel.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+};
+
+const hideFullscreenPrompt = () => {
+  if (!fullscreenPrompt) {
+    return;
+  }
+
+  fullscreenPrompt.classList.remove("is-visible");
+  fullscreenPrompt.setAttribute("aria-hidden", "true");
+};
+
+const showFullscreenPrompt = () => {
+  if (!fullscreenPrompt || document.fullscreenElement) {
+    return;
+  }
+
+  fullscreenPrompt.classList.add("is-visible");
+  fullscreenPrompt.setAttribute("aria-hidden", "false");
+};
+
+const toggleFullscreen = async () => {
+  if (!document.fullscreenEnabled) {
+    writeConsole("Fullscreen mode is not supported in this browser.");
+    uiBeep("warn");
+    return false;
+  }
+
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await document.documentElement.requestFullscreen();
+    }
+    updateFullscreenLabel();
+    uiBeep("soft");
+    return true;
+  } catch {
+    writeConsole("Fullscreen request was blocked.");
+    uiBeep("warn");
+    return false;
+  }
+};
+
+const toggleAudio = async () => {
+  audioEnabled = !audioEnabled;
+
+  if (!audioEnabled) {
+    stopHoldTone();
+    if (audioContext && audioContext.state === "running") {
+      try {
+        await audioContext.suspend();
+      } catch {
+        // Ignore suspend failures.
+      }
+    }
+  } else if (audioContext && audioContext.state === "suspended") {
+    try {
+      await audioContext.resume();
+    } catch {
+      // Ignore resume failures.
+    }
+  }
+
+  updateAudioUi();
+  writeConsole(audioEnabled ? "Audio channel enabled." : "Audio channel muted.");
+};
+
 const startHoldTone = () => {
   if (!audioContext || holdTone) {
     return;
@@ -539,13 +694,13 @@ const startHoldTone = () => {
   holdTone = { oscillator, gainNode, filterNode };
 };
 
-const updateHoldTone = () => {
+const updateHoldTone = (progress = holdProgress) => {
   if (!audioContext || !holdTone) {
     return;
   }
 
   const now = audioContext.currentTime;
-  const normalized = holdProgress / 100;
+  const normalized = progress / 100;
   const frequency = 110 + normalized * 320;
   const cutoff = 420 + normalized * 1800;
   const volume = 0.012 + normalized * 0.045;
@@ -575,6 +730,122 @@ const stopHoldTone = () => {
 
 const writeConsole = (message) => {
   consoleOutput.textContent = `>> ${message}`;
+};
+
+const confirmBootTheme = async () => {
+  if (bootThemeConfirmed || bootThemeTransitioning) {
+    return;
+  }
+
+  bootThemeTransitioning = true;
+  bootThemeConfirmed = true;
+  bootThemeHoldActive = false;
+  stopBootThemeHoldLoop();
+  stopHoldTone();
+
+  if (bootThemeConfirm) {
+    bootThemeConfirm.classList.remove("is-holding");
+    bootThemeConfirm.disabled = true;
+  }
+
+  uiBeep("confirm");
+  playTone({ frequency: 640, endFrequency: 920, duration: 0.16, volume: 0.02, type: "triangle" });
+  playNoiseBurst(0.045, 0.008);
+
+  await sequenceBootItemsOut(bootThemeSequenceItems, 280, 560);
+
+  if (bootThemeStage) {
+    bootThemeStage.hidden = true;
+  }
+
+  if (bootIgniteStage) {
+    bootIgniteStage.hidden = false;
+  }
+
+  renderHoldProgress();
+  await sequenceBootItemsIn(bootIgniteSequenceItems, 300, 460);
+  bootThemeTransitioning = false;
+};
+
+const renderBootThemeHoldProgress = () => {
+  if (bootThemeFill) {
+    bootThemeFill.style.width = `${bootThemeHoldProgress}%`;
+  }
+};
+
+const stopBootThemeHoldLoop = () => {
+  if (bootThemeHoldFrame) {
+    window.cancelAnimationFrame(bootThemeHoldFrame);
+    bootThemeHoldFrame = 0;
+  }
+};
+
+const animateBootThemeHold = (time) => {
+  if (!bootThemeHoldLastTick) {
+    bootThemeHoldLastTick = time;
+  }
+
+  const delta = (time - bootThemeHoldLastTick) / 1000;
+  bootThemeHoldLastTick = time;
+
+  if (bootThemeHoldActive) {
+    bootThemeHoldProgress = clamp(bootThemeHoldProgress + delta * 72, 0, 100);
+  } else {
+    bootThemeHoldProgress = clamp(bootThemeHoldProgress - delta * 110, 0, 100);
+  }
+
+  renderBootThemeHoldProgress();
+  updateHoldTone(bootThemeHoldProgress);
+
+  if (bootThemeConfirm) {
+    bootThemeConfirm.classList.toggle(
+      "is-holding",
+      bootThemeHoldActive || bootThemeHoldProgress > 0
+    );
+  }
+
+  if (!bootThemeConfirmed && bootThemeHoldProgress >= 100) {
+    confirmBootTheme();
+    return;
+  }
+
+  if (bootThemeHoldActive || bootThemeHoldProgress > 0) {
+    bootThemeHoldFrame = window.requestAnimationFrame(animateBootThemeHold);
+    return;
+  }
+
+  stopHoldTone();
+  stopBootThemeHoldLoop();
+};
+
+const beginBootThemeHold = async () => {
+  if (bootThemeConfirmed || bootThemeTransitioning) {
+    return;
+  }
+
+  bootThemeHoldActive = true;
+  bootThemeHoldLastTick = 0;
+  await ensureAudio();
+  startHoldTone();
+  updateHoldTone(bootThemeHoldProgress);
+  uiBeep("soft");
+
+  if (!bootThemeHoldFrame) {
+    bootThemeHoldFrame = window.requestAnimationFrame(animateBootThemeHold);
+  }
+};
+
+const endBootThemeHold = () => {
+  if (bootThemeConfirmed || bootThemeTransitioning) {
+    return;
+  }
+
+  bootThemeHoldActive = false;
+  bootThemeHoldLastTick = 0;
+
+  if (!bootThemeHoldFrame && bootThemeHoldProgress > 0) {
+    bootThemeHoldFrame = window.requestAnimationFrame(animateBootThemeHold);
+  }
 };
 
 const renderHoldProgress = () => {
@@ -639,7 +910,7 @@ const animateHold = (time) => {
 };
 
 const beginHold = async () => {
-  if (state.booting || state.booted || holdCompleted) {
+  if (!bootThemeConfirmed || state.booting || state.booted || holdCompleted) {
     return;
   }
 
@@ -943,6 +1214,10 @@ const createHazard = (sceneId) => {
     vy: random(-18, 18),
     radius: random(13, 22),
     color: scenes[sceneId].game.hazardColor,
+    kind: "water",
+    stretch: random(1.15, 1.45),
+    spin: random(-1.2, 1.2),
+    tilt: random(-0.25, 0.25),
   };
 };
 
@@ -1116,6 +1391,52 @@ const swapBrandLogo = (theme) => {
   nextImage.src = nextSrc;
 };
 
+const swapBootBackground = (theme, immediate = false) => {
+  if (!bootBackground) {
+    return;
+  }
+
+  const nextSrc = bootBackgroundByTheme[theme] || bootBackgroundByTheme.inferno;
+  const currentTheme = bootBackground.dataset.bgTheme;
+
+  if (immediate) {
+    bootBackground.dataset.bgTheme = theme;
+    bootBackground.style.backgroundImage = `url("${nextSrc}")`;
+    bootBackground.classList.remove("is-switching");
+    return;
+  }
+
+  if (currentTheme === theme) {
+    return;
+  }
+
+  const requestId = ++bootBackgroundSwapId;
+  const nextImage = new Image();
+  nextImage.onload = () => {
+    if (requestId !== bootBackgroundSwapId) {
+      return;
+    }
+
+    bootBackground.classList.add("is-switching");
+
+    window.setTimeout(() => {
+      if (requestId !== bootBackgroundSwapId) {
+        return;
+      }
+
+      bootBackground.style.backgroundImage = `url("${nextSrc}")`;
+      bootBackground.dataset.bgTheme = theme;
+
+      window.setTimeout(() => {
+        if (requestId === bootBackgroundSwapId) {
+          bootBackground.classList.remove("is-switching");
+        }
+      }, 110);
+    }, 150);
+  };
+  nextImage.src = nextSrc;
+};
+
 const getSceneImageSrc = (sceneId, theme) => {
   const sceneThemeMap = sceneImageByTheme[sceneId];
   if (sceneThemeMap && sceneThemeMap[theme]) {
@@ -1202,6 +1523,7 @@ const applyTheme = (theme) => {
   state.theme = theme;
   document.body.dataset.theme = theme;
   saveTheme(theme);
+  swapBootBackground(theme, !themeVisualsReady);
   swapBrandLogo(theme);
   swapSceneImage(state.currentScene, theme);
   swapCharacterSprite(theme);
@@ -1209,6 +1531,8 @@ const applyTheme = (theme) => {
   themeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.themeOption === theme);
   });
+
+  themeVisualsReady = true;
 };
 
 const getSceneIndex = (sceneId) => sceneOrder.indexOf(sceneId);
@@ -1338,6 +1662,7 @@ const startBootSequence = async () => {
   }
 
   writeConsole("System live. Select a chapter, then press Space to deploy.");
+  showFullscreenPrompt();
 };
 
 const applyAction = (action) => {
@@ -1597,6 +1922,51 @@ const drawPickup = (pickup) => {
 const drawHazard = (hazard) => {
   ctx.save();
   ctx.translate(hazard.x, hazard.y);
+
+  if (hazard.kind === "water") {
+    const angle = Math.atan2(hazard.vy, hazard.vx) + Math.PI * 0.5 + (hazard.tilt || 0);
+    const stretch = hazard.stretch || 1.25;
+    const tail = hazard.radius * stretch;
+    const body = hazard.radius * 0.78;
+
+    ctx.rotate(angle);
+    ctx.globalCompositeOperation = "screen";
+
+    const dropletGradient = ctx.createLinearGradient(0, -tail, 0, body);
+    dropletGradient.addColorStop(0, "rgba(242, 251, 255, 0.96)");
+    dropletGradient.addColorStop(0.42, "rgba(168, 227, 255, 0.92)");
+    dropletGradient.addColorStop(1, hazard.color);
+
+    ctx.fillStyle = dropletGradient;
+    ctx.beginPath();
+    ctx.moveTo(0, -tail);
+    ctx.bezierCurveTo(body * 0.95, -tail * 0.18, body, body * 0.55, 0, body);
+    ctx.bezierCurveTo(-body, body * 0.55, -body * 0.95, -tail * 0.18, 0, -tail);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.48)";
+    ctx.beginPath();
+    ctx.ellipse(-body * 0.2, -tail * 0.18, body * 0.22, tail * 0.2, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(187, 236, 255, 0.34)";
+    ctx.lineWidth = Math.max(1.5, hazard.radius * 0.11);
+    ctx.beginPath();
+    ctx.moveTo(0, body * 0.4);
+    ctx.lineTo(0, body * 0.95);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "rgba(195, 238, 255, 0.7)";
+    ctx.beginPath();
+    ctx.arc(body * 0.82, -body * 0.1, body * 0.16, 0, Math.PI * 2);
+    ctx.arc(body * 1.18, body * 0.12, body * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = hazard.color;
   ctx.beginPath();
   ctx.arc(0, 0, hazard.radius, 0, Math.PI * 2);
@@ -1977,7 +2347,12 @@ const updateHazards = (dt) => {
     state.heat = clamp(state.heat + (state.currentScene === "warden" ? 10 : 6), 0, 100);
     game.hitCooldown = 0.7;
     game.player.flash = 0.16;
-    spawnParticle(hitPoint.x, hitPoint.y, "#ffffff", 14);
+    spawnParticle(
+      hitPoint.x,
+      hitPoint.y,
+      state.currentScene === "river" ? "#b6ebff" : "#ffffff",
+      14
+    );
     uiBeep("warn");
     writeConsole(`Impact detected in ${scenes[state.currentScene].title}. Integrity reduced.`);
 
@@ -2151,6 +2526,57 @@ if (bootStartButton) {
   window.addEventListener("pointerup", endHold);
 }
 
+if (bootThemeConfirm) {
+  bootThemeConfirm.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    beginBootThemeHold();
+  });
+  bootThemeConfirm.addEventListener("pointerup", endBootThemeHold);
+  bootThemeConfirm.addEventListener("pointerleave", endBootThemeHold);
+  bootThemeConfirm.addEventListener("pointercancel", endBootThemeHold);
+  window.addEventListener("pointerup", endBootThemeHold);
+}
+
+primeBootSequenceItems(bootThemeSequenceItems);
+primeBootSequenceItems(bootIgniteSequenceItems, true);
+
+if (fullscreenToggle) {
+  fullscreenToggle.addEventListener("click", () => {
+    toggleFullscreen();
+  });
+}
+
+if (audioToggle) {
+  audioToggle.addEventListener("click", () => {
+    toggleAudio();
+  });
+}
+
+if (fullscreenAccept) {
+  fullscreenAccept.addEventListener("click", async () => {
+    const entered = await toggleFullscreen();
+    if (entered || document.fullscreenElement) {
+      hideFullscreenPrompt();
+      writeConsole("Fullscreen engaged. Archive viewport expanded.");
+    }
+  });
+}
+
+if (fullscreenDismiss) {
+  fullscreenDismiss.addEventListener("click", () => {
+    hideFullscreenPrompt();
+    writeConsole("Continuing in windowed mode. Fullscreen remains available from the top bar.");
+    uiBeep("soft");
+  });
+}
+
+document.addEventListener("fullscreenchange", () => {
+  updateFullscreenLabel();
+  if (document.fullscreenElement) {
+    hideFullscreenPrompt();
+  }
+});
+
 if (victoryContinueButton) {
   victoryContinueButton.addEventListener("click", () => {
     const nextSceneId = pendingVictoryNextScene;
@@ -2189,6 +2615,8 @@ resizeGameCanvas();
 renderSceneLocks();
 renderScene(state.currentScene);
 renderMeters();
+updateAudioUi();
+updateFullscreenLabel();
 updateClock();
 window.setInterval(updateClock, 1000);
 window.addEventListener("resize", resizeGameCanvas);
