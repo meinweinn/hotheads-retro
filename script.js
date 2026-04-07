@@ -27,6 +27,16 @@ const victorySync = document.querySelector("[data-victory-sync]");
 const victoryRewards = document.querySelector("[data-victory-rewards]");
 const victoryContinueButton = document.querySelector("[data-victory-continue]");
 const victoryReplayButton = document.querySelector("[data-victory-replay]");
+const endingScreen = document.querySelector("[data-ending-screen]");
+const endingBackdrop = document.querySelector("[data-ending-backdrop]");
+const endingTitle = document.querySelector("[data-ending-title]");
+const endingCopy = document.querySelector("[data-ending-copy]");
+const endingChapters = document.querySelector("[data-ending-chapters]");
+const endingShield = document.querySelector("[data-ending-shield]");
+const endingSync = document.querySelector("[data-ending-sync]");
+const endingOutcome = document.querySelector("[data-ending-outcome]");
+const endingRewards = document.querySelector("[data-ending-rewards]");
+const endingReturnButton = document.querySelector("[data-ending-return]");
 
 const sceneButtons = document.querySelectorAll("[data-scene]");
 const sceneStateNodes = document.querySelectorAll("[data-scene-state]");
@@ -413,6 +423,8 @@ const keys = Object.create(null);
 let audioContext = null;
 let audioEnabled = true;
 let holdTone = null;
+let ambientLayer = null;
+let ambientNoiseBuffer = null;
 let holdProgress = 0;
 let holdAnimationFrame = 0;
 let holdActive = false;
@@ -599,6 +611,206 @@ const uiBeep = (kind = "soft") => {
   }
 };
 
+const getAmbientNoiseBuffer = (audio) => {
+  if (ambientNoiseBuffer && ambientNoiseBuffer.sampleRate === audio.sampleRate) {
+    return ambientNoiseBuffer;
+  }
+
+  const length = audio.sampleRate * 2.4;
+  const buffer = audio.createBuffer(1, length, audio.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) {
+    data[i] = (Math.random() * 2 - 1) * 0.22;
+  }
+  ambientNoiseBuffer = buffer;
+  return buffer;
+};
+
+const stopAmbientAudio = () => {
+  if (!audioContext || !ambientLayer) {
+    ambientLayer = null;
+    return;
+  }
+
+  const layer = ambientLayer;
+  ambientLayer = null;
+
+  const now = audioContext.currentTime;
+  layer.master.gain.cancelScheduledValues(now);
+  layer.master.gain.setTargetAtTime(0.0001, now, 0.16);
+
+  window.setTimeout(() => {
+    layer.stops.forEach((stopper) => stopper());
+  }, 500);
+};
+
+const startAmbientAudio = async (sceneId) => {
+  if (!state.booted || !audioEnabled) {
+    return;
+  }
+
+  const audio = await ensureAudio();
+  if (!audio) {
+    return;
+  }
+
+  if (ambientLayer?.sceneId === sceneId) {
+    return;
+  }
+
+  stopAmbientAudio();
+
+  const master = audio.createGain();
+  master.gain.setValueAtTime(0.0001, audio.currentTime);
+  master.connect(audio.destination);
+
+  const stops = [];
+
+  const addInterval = (callback, ms) => {
+    const id = window.setInterval(callback, ms);
+    stops.push(() => window.clearInterval(id));
+  };
+
+  const addOscillator = ({
+    type = "sine",
+    frequency = 110,
+    volume = 0.01,
+    detune = 0,
+    lfoRate = 0,
+    lfoDepth = 0,
+  }) => {
+    const oscillator = audio.createOscillator();
+    const gainNode = audio.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audio.currentTime);
+    oscillator.detune.setValueAtTime(detune, audio.currentTime);
+    gainNode.gain.setValueAtTime(volume, audio.currentTime);
+    oscillator.connect(gainNode);
+    gainNode.connect(master);
+    oscillator.start();
+
+    let lfo = null;
+    let lfoGain = null;
+    if (lfoRate > 0 && lfoDepth > 0) {
+      lfo = audio.createOscillator();
+      lfoGain = audio.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(lfoRate, audio.currentTime);
+      lfoGain.gain.setValueAtTime(lfoDepth, audio.currentTime);
+      lfo.connect(lfoGain);
+      lfoGain.connect(oscillator.frequency);
+      lfo.start();
+    }
+
+    stops.push(() => {
+      try {
+        oscillator.stop();
+      } catch {}
+      oscillator.disconnect();
+      gainNode.disconnect();
+      if (lfo) {
+        try {
+          lfo.stop();
+        } catch {}
+        lfo.disconnect();
+      }
+      if (lfoGain) {
+        lfoGain.disconnect();
+      }
+    });
+  };
+
+  const addNoiseLayer = ({
+    volume = 0.01,
+    filterType = "lowpass",
+    frequency = 900,
+    q = 0.6,
+    postType = "",
+    postFrequency = 0,
+  }) => {
+    const source = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const gainNode = audio.createGain();
+    source.buffer = getAmbientNoiseBuffer(audio);
+    source.loop = true;
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(frequency, audio.currentTime);
+    filter.Q.setValueAtTime(q, audio.currentTime);
+    gainNode.gain.setValueAtTime(volume, audio.currentTime);
+
+    if (postType) {
+      const postFilter = audio.createBiquadFilter();
+      postFilter.type = postType;
+      postFilter.frequency.setValueAtTime(postFrequency, audio.currentTime);
+      source.connect(filter);
+      filter.connect(postFilter);
+      postFilter.connect(gainNode);
+      gainNode.connect(master);
+      source.start();
+      stops.push(() => {
+        try {
+          source.stop();
+        } catch {}
+        source.disconnect();
+        filter.disconnect();
+        postFilter.disconnect();
+        gainNode.disconnect();
+      });
+      return;
+    }
+
+    source.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(master);
+    source.start();
+    stops.push(() => {
+      try {
+        source.stop();
+      } catch {}
+      source.disconnect();
+      filter.disconnect();
+      gainNode.disconnect();
+    });
+  };
+
+  if (sceneId === "hydra") {
+    addOscillator({ type: "triangle", frequency: 96, volume: 0.028, lfoRate: 0.08, lfoDepth: 4 });
+    addOscillator({ type: "sine", frequency: 188, volume: 0.015, detune: 6, lfoRate: 0.13, lfoDepth: 3 });
+    addNoiseLayer({ volume: 0.016, filterType: "lowpass", frequency: 920, q: 0.8 });
+    addInterval(() => {
+      playTone({ frequency: 510, endFrequency: 680, duration: 0.22, volume: 0.01, type: "triangle" });
+    }, 3600);
+  } else if (sceneId === "warden") {
+    addOscillator({ type: "sawtooth", frequency: 74, volume: 0.026, lfoRate: 0.09, lfoDepth: 5 });
+    addOscillator({ type: "triangle", frequency: 148, volume: 0.012, detune: -5, lfoRate: 0.07, lfoDepth: 2 });
+    addNoiseLayer({ volume: 0.02, filterType: "bandpass", frequency: 260, q: 0.9, postType: "lowpass", postFrequency: 1800 });
+    addInterval(() => {
+      playTone({ frequency: 120, endFrequency: 88, duration: 0.28, volume: 0.012, type: "sawtooth" });
+      playNoiseBurst(0.06, 0.006);
+    }, 2800);
+  } else if (sceneId === "river") {
+    addOscillator({ type: "sine", frequency: 140, volume: 0.024, lfoRate: 0.18, lfoDepth: 3 });
+    addOscillator({ type: "triangle", frequency: 280, volume: 0.011, detune: 4, lfoRate: 0.24, lfoDepth: 5 });
+    addNoiseLayer({ volume: 0.026, filterType: "highpass", frequency: 980, q: 0.6, postType: "lowpass", postFrequency: 3200 });
+    addInterval(() => {
+      playTone({ frequency: 740, endFrequency: 520, duration: 0.18, volume: 0.01, type: "sine" });
+      playTone({ frequency: 420, endFrequency: 300, duration: 0.24, volume: 0.007, type: "triangle" });
+    }, 2100);
+  }
+
+  ambientLayer = { sceneId, master, stops };
+  master.gain.setTargetAtTime(0.12, audio.currentTime, 0.45);
+};
+
+const syncAmbientAudio = async () => {
+  if (!state.booted || !audioEnabled) {
+    stopAmbientAudio();
+    return;
+  }
+
+  await startAmbientAudio(state.currentScene);
+};
+
 const updateFullscreenLabel = () => {
   if (!fullscreenLabel) {
     return;
@@ -653,6 +865,7 @@ const toggleAudio = async () => {
 
   if (!audioEnabled) {
     stopHoldTone();
+    stopAmbientAudio();
     if (audioContext && audioContext.state === "running") {
       try {
         await audioContext.suspend();
@@ -666,6 +879,7 @@ const toggleAudio = async () => {
     } catch {
       // Ignore resume failures.
     }
+    syncAmbientAudio();
   }
 
   updateAudioUi();
@@ -1297,14 +1511,19 @@ const finishMission = (won) => {
       );
     } else {
       writeConsole(`${scenes[state.currentScene].title} complete. Archive marks the route as secured.`);
-    }
+      }
 
-    uiBeep("confirm");
-    showVictoryScreen({ sceneId: state.currentScene, nextSceneId });
-  } else {
-    writeConsole(`${scenes[state.currentScene].title} failed. Stabilize and press Space to redeploy.`);
-    uiBeep("warn");
-  }
+      uiBeep("confirm");
+      if (nextSceneId) {
+        showVictoryScreen({ sceneId: state.currentScene, nextSceneId });
+      } else {
+        hideVictoryScreen();
+        showEndingScreen(state.currentScene);
+      }
+    } else {
+      writeConsole(`${scenes[state.currentScene].title} failed. Stabilize and press Space to redeploy.`);
+      uiBeep("warn");
+    }
   updateMissionStats();
 };
 
@@ -1327,6 +1546,7 @@ const renderScene = (sceneId) => {
   state.currentScene = sceneId;
   pendingVictoryNextScene = null;
   hideVictoryScreen();
+  hideEndingScreen();
   sceneChip.textContent = scene.chip;
   sceneTitle.textContent = scene.title;
   sceneZone.textContent = scene.zone;
@@ -1356,6 +1576,7 @@ const renderScene = (sceneId) => {
   game.target = scene.game.target;
   updateMissionStats();
   renderSceneLocks();
+  syncAmbientAudio();
 };
 
 const pulseButton = (button) => {
@@ -1576,6 +1797,15 @@ const hideVictoryScreen = () => {
   victoryScreen.setAttribute("aria-hidden", "true");
 };
 
+const hideEndingScreen = () => {
+  if (!endingScreen) {
+    return;
+  }
+
+  endingScreen.classList.remove("is-visible");
+  endingScreen.setAttribute("aria-hidden", "true");
+};
+
 const showVictoryScreen = ({ sceneId, nextSceneId }) => {
   if (!victoryScreen) {
     return;
@@ -1609,6 +1839,49 @@ const showVictoryScreen = ({ sceneId, nextSceneId }) => {
   }
   victoryScreen.classList.add("is-visible");
   victoryScreen.setAttribute("aria-hidden", "false");
+};
+
+const showEndingScreen = (sceneId) => {
+  if (!endingScreen) {
+    return;
+  }
+
+  const scene = scenes[sceneId];
+  const totalChapters = sceneOrder.length;
+  if (endingBackdrop) {
+    endingBackdrop.style.backgroundImage = `radial-gradient(circle at 50% 24%, var(--flare), transparent 24%), linear-gradient(180deg, rgba(4, 8, 18, 0.28), rgba(0, 0, 0, 0.9)), url("${getSceneImageSrc(sceneId, state.theme)}")`;
+  }
+  if (endingTitle) {
+    endingTitle.textContent = "Archive Crown Claimed";
+  }
+  if (endingCopy) {
+    endingCopy.textContent =
+      "River Run is complete. The last corridor of the archive has been burned open and the full route now belongs to Hot Heads.";
+  }
+  if (endingChapters) {
+    endingChapters.textContent = `${totalChapters} / ${totalChapters}`;
+  }
+  if (endingShield) {
+    endingShield.textContent = `${Math.round(game.player.hp)}%`;
+  }
+  if (endingSync) {
+    endingSync.textContent = `${Math.round(state.sync)}%`;
+  }
+  if (endingOutcome) {
+    endingOutcome.textContent =
+      "Every chapter is cleared. The river failed to extinguish the squad and the archive now answers to your flame.";
+  }
+  if (endingRewards) {
+    endingRewards.innerHTML = [
+      "Archive fully cleared",
+      "All chapters permanently marked completed",
+      `${scene.title} sealed as the final victory route`,
+    ]
+      .map((item) => `<li>${item}</li>`)
+      .join("");
+  }
+  endingScreen.classList.add("is-visible");
+  endingScreen.setAttribute("aria-hidden", "false");
 };
 
 const startBootSequence = async () => {
@@ -1662,6 +1935,7 @@ const startBootSequence = async () => {
   }
 
   writeConsole("System live. Select a chapter, then press Space to deploy.");
+  syncAmbientAudio();
   showFullscreenPrompt();
 };
 
@@ -2593,6 +2867,14 @@ if (victoryContinueButton) {
     }
 
     pendingVictoryNextScene = null;
+  });
+}
+
+if (endingReturnButton) {
+  endingReturnButton.addEventListener("click", () => {
+    hideEndingScreen();
+    uiBeep("confirm");
+    writeConsole("Final archive state logged. Free roam remains available across all completed chapters.");
   });
 }
 

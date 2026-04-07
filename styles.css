@@ -544,6 +544,25 @@ body.is-booting .arcade-shell {
   pointer-events: auto;
 }
 
+.ending-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 280ms ease, visibility 280ms ease;
+}
+
+.ending-screen.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .fullscreen-prompt {
   position: fixed;
   inset: 0;
@@ -612,10 +631,21 @@ body.is-booting .arcade-shell {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(2, 8, 12, 0.36), rgba(0, 0, 0, 0.86)),
-    center / cover no-repeat;
+      linear-gradient(180deg, rgba(2, 8, 12, 0.36), rgba(0, 0, 0, 0.86)),
+      center / cover no-repeat;
   filter: blur(8px) saturate(1.1);
   transform: scale(1.04);
+}
+
+.ending-screen__backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 24%, var(--flare), transparent 24%),
+    linear-gradient(180deg, rgba(4, 8, 18, 0.28), rgba(0, 0, 0, 0.9)),
+    center / cover no-repeat;
+  filter: blur(9px) saturate(1.14);
+  transform: scale(1.05);
 }
 
 .victory-card {
@@ -628,8 +658,22 @@ body.is-booting .arcade-shell {
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 184, 81, 0.08)),
     rgba(6, 14, 20, 0.92);
   box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+      0 26px 60px rgba(0, 0, 0, 0.5);
+}
+
+.ending-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 920px);
+  padding: 1.7rem;
+  border: 1px solid rgba(255, 184, 81, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 184, 81, 0.1)),
+    rgba(6, 14, 20, 0.92);
+  box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 26px 60px rgba(0, 0, 0, 0.5);
+    0 28px 72px rgba(0, 0, 0, 0.54);
 }
 
 .victory-card__title {
@@ -645,6 +689,87 @@ body.is-booting .arcade-shell {
   max-width: 54ch;
   color: var(--muted);
   line-height: 1.8;
+}
+
+.ending-card__title {
+  margin: 0;
+  max-width: 13ch;
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: clamp(1.9rem, 5vw, 3.8rem);
+  letter-spacing: 0.14em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.ending-card__copy {
+  margin: 1rem 0 0;
+  max-width: 62ch;
+  color: var(--muted);
+  line-height: 1.85;
+}
+
+.ending-hero {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.ending-hero__panel,
+.ending-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 184, 81, 0.05)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.ending-hero__panel {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+}
+
+.ending-hero__panel span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ending-hero__panel strong {
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  letter-spacing: 0.1em;
+}
+
+.ending-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.ending-panel {
+  padding: 1rem;
+}
+
+.ending-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.ending-panel ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.ending-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
 }
 
 .victory-stats {
@@ -1563,5 +1688,14 @@ body.is-booting .arcade-shell {
 
   .victory-stats {
     grid-template-columns: 1fr;
+  }
+
+  .ending-hero,
+  .ending-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ending-actions {
+    justify-content: stretch;
   }
 }
