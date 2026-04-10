@@ -22,8 +22,12 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((request, response) => {
-  const requestPath = request.url === "/" ? "/index.html" : request.url;
-  const safePath = path.normalize(requestPath).replace(/^(\.\.[/\\])+/, "");
+  const urlPath = new URL(request.url, `http://localhost:${PORT}`).pathname;
+  const requestPath = urlPath === "/" ? "/index.html" : urlPath;
+  const normalizedPath = requestPath.endsWith("/")
+    ? `${requestPath}index.html`
+    : requestPath;
+  const safePath = path.normalize(normalizedPath).replace(/^(\.\.[/\\])+/, "");
   const filePath = path.join(ROOT, safePath);
 
   if (!filePath.startsWith(ROOT)) {

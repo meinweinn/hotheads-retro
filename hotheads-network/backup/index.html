@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hot Heads Network</title>
+    <meta
+      name="description"
+      content="Hot Heads Network internal hub for campaign tracking, allocation status, and member intake."
+    />
+    <link rel="icon" type="image/png" href="../assets/hh-favicon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="welcome" data-theme="inferno" class="is-theme-gate">
+    <div class="welcome-backdrop" aria-hidden="true">
+      <span class="welcome-backdrop__image" data-welcome-bg></span>
+      <span class="welcome-backdrop__orb welcome-backdrop__orb--left"></span>
+      <span class="welcome-backdrop__orb welcome-backdrop__orb--right"></span>
+      <span class="welcome-backdrop__beam welcome-backdrop__beam--one"></span>
+      <span class="welcome-backdrop__beam welcome-backdrop__beam--two"></span>
+      <span class="welcome-backdrop__grid"></span>
+    </div>
+
+    <section class="theme-gate" data-theme-gate aria-hidden="false">
+      <div class="theme-gate__card">
+        <div class="theme-gate__head">
+          <span class="eyebrow">Select Theme</span>
+          <h2>Choose the network atmosphere before entry.</h2>
+        </div>
+
+        <div class="theme-gate__grid" role="tablist" aria-label="Theme selector">
+          <button class="theme-choice is-active" type="button" data-theme-choice="inferno" aria-label="Inferno theme">
+            <img src="../assets/inferno-icon.png" alt="" class="theme-choice__icon" />
+            <span class="theme-choice__title">Inferno</span>
+            <span class="theme-choice__copy">Core Hot Heads palette with molten signal glow.</span>
+          </button>
+          <button class="theme-choice" type="button" data-theme-choice="toxic" aria-label="Toxic theme">
+            <img src="../assets/toxic-icon.png" alt="" class="theme-choice__icon" />
+            <span class="theme-choice__title">Toxic</span>
+            <span class="theme-choice__copy">Reactor-green overlays with corrosive energy accents.</span>
+          </button>
+          <button class="theme-choice" type="button" data-theme-choice="abyss" aria-label="Abyss theme">
+            <img src="../assets/abyss-icon.png" alt="" class="theme-choice__icon" />
+            <span class="theme-choice__title">Abyss</span>
+            <span class="theme-choice__copy">Void-toned signals with spectral blue-violet highlights.</span>
+          </button>
+        </div>
+
+        <div class="theme-gate__actions">
+          <button class="welcome-button welcome-button--primary theme-gate__confirm" type="button" data-theme-confirm>
+            <span class="welcome-button__label">Confirm Theme</span>
+            <span class="welcome-button__meta">Lock the current palette and enter the network.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <main class="welcome-stage">
+      <div class="top-controls">
+        <div class="theme-switcher" aria-label="Theme switcher">
+          <button class="theme-switcher__button" type="button" aria-label="Switch to Inferno theme" data-theme-toggle="inferno">
+            <img src="../assets/inferno-icon.png" alt="" class="theme-switcher__icon" />
+          </button>
+          <button class="theme-switcher__button" type="button" aria-label="Switch to Toxic theme" data-theme-toggle="toxic">
+            <img src="../assets/toxic-icon.png" alt="" class="theme-switcher__icon" />
+          </button>
+          <button class="theme-switcher__button" type="button" aria-label="Switch to Abyss theme" data-theme-toggle="abyss">
+            <img src="../assets/abyss-icon.png" alt="" class="theme-switcher__icon" />
+          </button>
+        </div>
+
+      <button class="audio-toggle" type="button" aria-label="Toggle audio" data-audio-toggle>
+        <span class="audio-toggle__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path
+              d="M4 14.25V9.75h4.2L13.4 5v14l-5.2-4.75H4Z"
+              fill="currentColor"
+            />
+            <path
+              d="M16.2 8.2a5.5 5.5 0 0 1 0 7.6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M18.8 5.6a9 9 0 0 1 0 12.8"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+        </span>
+        <span class="audio-toggle__state sr-only" data-audio-state>On</span>
+      </button>
+      </div>
+
+      <button
+        class="stage-nav stage-nav--left"
+        type="button"
+        aria-label="Open projects panel"
+        data-stage-nav="prev"
+      >
+        <span class="stage-nav__icon" aria-hidden="true">&lsaquo;</span>
+        <span class="stage-nav__label">Projects</span>
+      </button>
+
+      <div class="stage-viewport">
+        <div class="stage-track" data-stage-track>
+          <section class="stage-panel stage-panel--projects" data-stage-panel="projects">
+            <article class="welcome-hero stage-card stage-card--projects">
+              <div class="stage-panel__header">
+                <span class="eyebrow">Project Board</span>
+                <h2>Current + Previous Campaigns</h2>
+              </div>
+
+              <div class="project-stack">
+                <article class="project-card">
+                  <div class="project-card__top">
+                    <div>
+                      <h3>Network Genesis Drop</h3>
+                      <span class="project-card__status">Twitter Engagement Allocation</span>
+                    </div>
+                    <span class="status-chip" data-status="paid">Paid</span>
+                  </div>
+                  <p class="project-card__body">
+                    First network activation completed. Allocation delivered after engagement cycle closure.
+                  </p>
+                </article>
+
+                <article class="project-card">
+                  <div class="project-card__top">
+                    <div>
+                      <h3>Expansion Queue</h3>
+                      <span class="project-card__status">Incoming Token Campaigns</span>
+                    </div>
+                    <span class="status-chip" data-status="review">Review</span>
+                  </div>
+                  <p class="project-card__body">
+                    Next partner projects are being evaluated for fit, audience overlap, and allocation quality.
+                  </p>
+                </article>
+
+                <article class="project-card">
+                  <div class="project-card__top">
+                    <div>
+                      <h3>Operator Rotation</h3>
+                      <span class="project-card__status">Crew Assignment Layer</span>
+                    </div>
+                    <span class="status-chip" data-status="active">Active</span>
+                  </div>
+                  <p class="project-card__body">
+                    Internal routing for engagement waves, reporting visibility, and campaign coverage planning.
+                  </p>
+                </article>
+              </div>
+            </article>
+          </section>
+
+          <section class="stage-panel stage-panel--welcome is-active" data-stage-panel="welcome">
+            <article class="welcome-hero stage-card stage-card--welcome">
+              <div class="welcome-hero__center">
+                <div class="welcome-hero__halo" aria-hidden="true">
+                  <span class="welcome-hero__glow"></span>
+                  <span class="welcome-hero__ring"></span>
+                  <span class="welcome-hero__ring welcome-hero__ring--inner"></span>
+                  <span class="welcome-hero__spark welcome-hero__spark--one"></span>
+                  <span class="welcome-hero__spark welcome-hero__spark--two"></span>
+                  <span class="welcome-hero__spark welcome-hero__spark--three"></span>
+                </div>
+
+                <img
+                  src="../assets/loho-hh-export-3.png"
+                  alt="Hot Heads"
+                  class="welcome-hero__logo"
+                  data-welcome-logo
+                />
+              </div>
+
+              <div class="welcome-hero__dock">
+                <div class="welcome-stage__bottom">
+                  <article class="welcome-stat">
+                    <span>Operators</span>
+                    <strong>70</strong>
+                  </article>
+                  <article class="welcome-stat">
+                    <span>Latest Drop</span>
+                    <strong>Paid</strong>
+                  </article>
+                  <article class="welcome-stat">
+                    <span>Status</span>
+                    <strong>Expansion Active</strong>
+                  </article>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="stage-panel stage-panel--apply" data-stage-panel="apply">
+            <article class="welcome-hero stage-card stage-card--apply">
+              <div class="stage-panel__header">
+                <span class="eyebrow">Apply Form</span>
+                <h2>Operator Intake</h2>
+              </div>
+
+              <form class="network-form" data-network-form>
+                <label>
+                  <span>X / Twitter Handle</span>
+                  <input type="text" name="handle" placeholder="@username" />
+                </label>
+                <label>
+                  <span>Wallet Address</span>
+                  <input type="text" name="wallet" placeholder="0x..." />
+                </label>
+                <label>
+                  <span>Discord</span>
+                  <input type="text" name="discord" placeholder="username#0000" />
+                </label>
+                <label>
+                  <span>Main Region</span>
+                  <input type="text" name="region" placeholder="TR / EU / Global" />
+                </label>
+                <label class="network-form__full">
+                  <span>Notes</span>
+                  <textarea name="notes" rows="4" placeholder="Campaign fit, availability, extra notes"></textarea>
+                </label>
+                <div class="network-form__actions network-form__full">
+                  <p class="form-hint">Internal intake only. Data stays local in this prototype build.</p>
+                  <button class="welcome-button welcome-button--primary" type="submit">
+                    <span class="welcome-button__label">Save Intake</span>
+                    <span class="welcome-button__meta">Store locally for operator tracking.</span>
+                  </button>
+                </div>
+              </form>
+            </article>
+          </section>
+        </div>
+      </div>
+
+      <button
+        class="stage-nav stage-nav--right"
+        type="button"
+        aria-label="Open apply form panel"
+        data-stage-nav="next"
+      >
+        <span class="stage-nav__label">Apply</span>
+        <span class="stage-nav__icon" aria-hidden="true">&rsaquo;</span>
+      </button>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
